@@ -23,4 +23,4 @@ Dependencies
 - matplotlib
 - keras
 - tensorflow
-
+- libscientific
