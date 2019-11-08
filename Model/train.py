@@ -32,7 +32,6 @@ from sklearn.metrics import r2_score
 from sys import argv
 import time
 import tensorflow as tf
-from math import sqrt
 
 
 K.clear_session()
@@ -170,12 +169,16 @@ class NN(object):
                 for number in row:
                     ypred.append(number)
             for row in self.y[i]:
-                for number in self.y[i]:
+                for number in row:
                     ytrue.append(number)
+        ytrue = np.array(ytrue)
+        ypred = np.array(ypred)
         print("R2: %.4f MSE: %.4f MAE: %.4f" % (r2_score(ytrue, ypred),
                                                 mse(ytrue, ypred),
                                                 mae(ytrue, ypred)))
-        plt.scatter(ytrue, ypred, s="3")
+        plt.scatter(ytrue, ypred, s=3)
+        plt.xlabel('Experimental inverted matrix values')
+        plt.ylabel('Predicted inverted matrix values')
         plt.show()
 
 
