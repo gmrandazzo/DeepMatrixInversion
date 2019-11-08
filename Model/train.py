@@ -93,7 +93,8 @@ class NN(object):
         model.add(Reshape((msize, msize)))
         model.compile(loss='mae',
                       optimizer=optimizers.Adam(),
-                      metrics=['mse', 'mae', self.floss])
+                      metrics=['mse', 'mae'])
+                      #metrics=['mse', 'mae', self.floss])
         return model
 
     def train(self,
