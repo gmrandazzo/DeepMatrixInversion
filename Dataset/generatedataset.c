@@ -61,8 +61,8 @@ void SaveMatrixToFile(matrix *m, char *outfilename)
 
 int main(int argc, char **argv){
 	size_t n, msize, n_max;
-	double rmin = -1;
-	double rmax = 1;
+	double rmin = -5;
+	double rmax = 5;
   int det;
   char smx[25], dmx[25], tmx[25];
 	matrix *m, *m_inv;

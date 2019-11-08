@@ -87,7 +87,7 @@ class NN(object):
         # model.add(BatchNormalization(input_shape=(msize, msize,)))
         model.add(Flatten(input_shape=(msize, msize, )))
         model.add(Dense(nunits, activation='relu'))
-        model.add(Dropout(0.15))
+        model.add(Dropout(0.1))
         model.add(Dense(nunits, activation='relu'))
         model.add(Dense(nunits, activation='relu'))
         model.add(Dense(nunits, activation='relu'))
@@ -100,7 +100,7 @@ class NN(object):
                       metrics=['mse', 'mae', self.floss])
         """
         model.compile(loss="mae",
-                      optimizer=optimizers.Adam(),
+                      optimizer=optimizers.Adam(lr=0.0005),
                       metrics=['mse', 'mae'])
 
         return model
