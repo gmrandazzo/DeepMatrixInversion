@@ -17,7 +17,8 @@ import argparse
 from datetime import datetime
 import numpy as np
 from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
-from keras.layers import Dense, Dropout
+from keras.engine.input_layer import Input
+from keras.layers import Flatten, Dense, Dropout, Reshape, BatchNormalization
 from keras.models import Sequential, Model
 from keras.models import load_model
 from keras import optimizers
@@ -30,12 +31,15 @@ from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import r2_score
 from sys import argv
 import time
+import tensorflow as tf
+from math import sqrt
 
 
 K.clear_session()
 
 
 def ReadMatrix(fmx):
+    """
     mx = []
     row = []
     f = open(fmx, "r")
@@ -47,52 +51,50 @@ def ReadMatrix(fmx):
         else:
             row.extend(str.split(line, ","))
     f.close()
-    return np.array(mx).astype(float)
-
-
-def floss(self, y_true, y_pred):
-    # loss = || I - AA^{-1}||
-    # y_true is the true A^{-1}. By inverting again this, you get A.
-    # y_pred is the predicted A^{-1}.
-    # then for each row compute A*A^-1
-    # a = tf.linalg.inv(y_true)
-    # K.mean(K.abs(eye - K.dot(a, y_pred)))
-
-    # eye = K.eye(self.msize)
-    # yt = y_true.eval(session=self.sess)
-    # yt = self.sess.run(y_true)
-    # yp = y_pred.eval(session=self.sess)
-    # print(yt)
-    # print(yp)
-    # print(eye)
-    # print("-"*20)
-    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
-
-
-def build_model(nfeatures, nunits):
-    model = Sequential()
-    # model.add(BatchNormalization(input_shape=(nfeatures,)))
-    # model.add(Dense(nunits, activation='relu'))
-    model.add(Dense(nunits, activation='relu', input_shape=(nfeatures,)))
-    model.add(Dropout(0.15))
-    model.add(Dense(nunits, activation='relu'))
-    model.add(Dense(nunits, activation='relu'))
-    model.add(Dense(nunits, activation='relu'))
-    model.add(Dense(nfeatures))
-    model.compile(loss='mae',
-                  optimizer=optimizers.Adam(lr=0.00005),
-                  metrics=['mse', 'mae'])
-    return model
+    """
+    mxs = []
+    mx = []
+    f = open(fmx, "r")
+    for line in f:
+        line = line.strip()
+        if "END" in line:
+            mxs.append(mx.copy())
+            del mx[:]
+        else:
+            mx.append(str.split(line, ","))
+    f.close()
+    return np.array(mxs).astype(float)
 
 
 class NN(object):
-    def __init__(self, data_mx_input, target_mx_output, msize=3):
+    def __init__(self, data_mx_input, target_mx_output):
         self.X = ReadMatrix(data_mx_input)
         self.y = ReadMatrix(target_mx_output)
-        self.nfeatures = self.X.shape[1]
-        self.msize = msize
+        self.msize = self.X.shape[1]
+        print(self.X.shape)
         self.verbose = 1
         self.sess = K.get_session()
+
+    def floss(self, y_true, y_pred):
+        # loss = || I - AA^{-1}||
+        # return tf.reduce_mean(tf.square(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred))
+        return tf.reduce_mean(tf.linalg.norm(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred, ord='euclidean'))
+
+    def build_model(self, msize, nunits):
+        model = Sequential()
+        # model.add(BatchNormalization(input_shape=(msize, msize,)))
+        model.add(Flatten(input_shape=(msize, msize, )))
+        model.add(Dense(nunits, activation='relu'))
+        model.add(Dropout(0.15))
+        model.add(Dense(nunits, activation='relu'))
+        model.add(Dense(nunits, activation='relu'))
+        model.add(Dense(nunits, activation='relu'))
+        model.add(Dense(msize * msize))
+        model.add(Reshape((msize, msize)))
+        model.compile(loss=self.floss,
+                      optimizer=optimizers.Adam(),
+                      metrics=['mse', 'mae', self.floss])
+        return model
 
     def train(self,
               batch_size_,
@@ -116,7 +118,7 @@ class NN(object):
                             random_state=datetime.now().microsecond)
         mid = 0
         for train_index, test_index in rkf.split(self.X):
-            model = build_model(self.nfeatures, nunits)
+            model = self.build_model(self.msize, nunits)
             print(model.summary())
             X_subset, X_test = self.X[train_index], self.X[test_index]
             y_subset, y_test = self.y[train_index], self.y[test_index]
@@ -140,7 +142,7 @@ class NN(object):
                                       write_graph=False,
                                       write_images=False),
                           ModelCheckpoint(model_output,
-                                          monitor='val_loss',
+                                          monitor='floss',
                                           verbose=0,
                                           save_best_only=True)]
 
@@ -163,14 +165,16 @@ class NN(object):
             # predictions[i] contains multiple prediction of the same things.
             # So average by column
             prow = np.array(predictions[i]).mean(axis=0)
-            for number in prow:
-                ypred.append(number)
-            for number in self.y[i]:
-                ytrue.append(number)
+            for row in prow:
+                for number in row:
+                    ypred.append(number)
+            for row in self.y[i]:
+                for number in self.y[i]:
+                    ytrue.append(number)
         print("R2: %.4f MSE: %.4f MAE: %.4f" % (r2_score(ytrue, ypred),
                                                 mse(ytrue, ypred),
                                                 mae(ytrue, ypred)))
-        plt.scatter(ytrue, ypred)
+        plt.scatter(ytrue, ypred, s="3")
         plt.show()
 
 
