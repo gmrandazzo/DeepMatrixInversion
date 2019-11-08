@@ -91,7 +91,7 @@ class NN(object):
         model.add(Dense(nunits, activation='relu'))
         model.add(Dense(msize * msize))
         model.add(Reshape((msize, msize)))
-        model.compile(loss=self.floss,
+        model.compile(loss='mae',
                       optimizer=optimizers.Adam(),
                       metrics=['mse', 'mae', self.floss])
         return model
@@ -142,7 +142,7 @@ class NN(object):
                                       write_graph=False,
                                       write_images=False),
                           ModelCheckpoint(model_output,
-                                          monitor='floss',
+                                          monitor='val_loss',
                                           verbose=0,
                                           save_best_only=True)]
 
