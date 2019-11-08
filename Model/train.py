@@ -76,7 +76,10 @@ class NN(object):
 
     def floss(self, y_true, y_pred):
         # loss = || I - AA^{-1}||
+        # y_true is the true inverse
+        # y_pred is the predicted inverse
         # return tf.reduce_mean(tf.square(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred))
+        # return tf.linalg.norm(tf.eye(self.msize) - tf.reduce_mean(tf.linalg.inv(y_true)*y_pred), ord='euclidean')
         return tf.reduce_mean(tf.linalg.norm(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred, ord='euclidean'))
 
     def build_model(self, msize, nunits):
@@ -90,10 +93,16 @@ class NN(object):
         model.add(Dense(nunits, activation='relu'))
         model.add(Dense(msize * msize))
         model.add(Reshape((msize, msize)))
-        model.compile(loss='mae',
+        """
+        # remove comments if you want to test floss
+        model.compile(loss=self.floss,
+                      optimizer=optimizers.Adam(),
+                      metrics=['mse', 'mae', self.floss])
+        """
+        model.compile(loss="mae",
                       optimizer=optimizers.Adam(),
                       metrics=['mse', 'mae'])
-                      #metrics=['mse', 'mae', self.floss])
+
         return model
 
     def train(self,
