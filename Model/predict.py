@@ -26,7 +26,7 @@ def main():
     if args.inputmx is None or args.model is None:
         print("ERROR! Please specify input file matrix and a model directory!")
         print("\n Prediction usage: %s --inputmx [input file] --inverseout [output file] --model [path of the model]" % (argv[0]))
-        print("\n Prediction with target evaluation usage: %s --inputmx [input file] --expetarget [experimental target file] --inverseout [output file] --model [path of the model]" % (argv[0]))
+        print("\n Prediction with target evaluation usage: %s --inputmx [input file] --exptarget [experimental target file] --inverseout [output file] --model [path of the model]" % (argv[0]))
     else:
         nn = NN(args.inputmx, args.exptarget)
         nn.predict(args.model, args.inverseout)

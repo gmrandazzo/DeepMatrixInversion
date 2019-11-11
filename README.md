@@ -1,6 +1,6 @@
 # DeepMatrixInversion
 
-Invert matrix using a neural network
+Invert matrix using a neural network.
 
 
 License
