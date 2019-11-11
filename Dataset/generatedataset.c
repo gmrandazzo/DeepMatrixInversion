@@ -60,42 +60,93 @@ void SaveMatrixToFile(matrix *m, char *outfilename)
 }
 
 int main(int argc, char **argv){
-	size_t n, msize, n_max;
-	double rmin = -5;
-	double rmax = 5;
+	size_t n_train, n_val, n_singular, msize, n_max;
+	double rmin = atof(argv[3]);
+	double rmax = atof(argv[4]);
   int det;
-  char smx[25], dmx[25], tmx[25];
+  char smx[35], simx[35], tmx[35], timx[35], vmx[35], vimx[35];
 	matrix *m, *m_inv;
-	if(argc != 3){
-		printf("\nUsage: %s [matrix size] [number of samples]\n", argv[0]);
+	if(argc != 5){
+		printf("\nUsage: %s [matrix size] [number of samples] [range min] [range max]\n", argv[0]);
 	}
 	else{
 		msize = atoi(argv[1]);
 		n_max = atoi(argv[2]);
-    sprintf(smx, "singular_matrix_%lux%lu.mx", msize, msize);
-    sprintf(dmx, "dataset_matrix_%lux%lu.mx", msize, msize);
-    sprintf(tmx, "target_matrix_%lux%lu.mx", msize, msize);
+    sprintf(smx, "sing_matrix_%lux%lu.mx", msize, msize);
+    sprintf(simx, "sing_moore-penrose_inverse_%lux%lu.mx", msize, msize);
+    sprintf(tmx, "train_matrix_%lux%lu.mx", msize, msize);
+    sprintf(timx, "train_target_inverse_%lux%lu.mx", msize, msize);
+    sprintf(vmx, "val_matrix_%lux%lu.mx", msize, msize);
+    sprintf(vimx, "val_target_inverse_%lux%lu.mx", msize, msize);
 		//srand(14159265358979323846264338327950288419716939937510);
     srand(curr_milliseconds());
-		/*Generate the training/validation dataset */
-    n = 0;
-    while(n < n_max){
+    n_train = 0;
+    n_singular = 0;
+    /*
+     * Generate the training set
+     */
+    while(n_train < n_max){
+      NewMatrix(&m, msize, msize);
+      MatrixRandomFill(m, rmin, rmax);
+      det = (int)floor(fabs(MatrixDeterminant(m)));
+			if(det == 0){
+        if(n_singular < n_max){
+          /* Ops.. a singular matrix was generated... */
+          printf("Ops... this matrix is singular!! -> ");
+          printf("Determinant == %d\n", det);
+  				SaveMatrixToFile(m, smx);
+          initMatrix(&m_inv);
+          MatrixMoorePenrosePseudoinverse(m, &m_inv);
+          SaveMatrixToFile(m_inv, simx);
+          DelMatrix(&m_inv);
+          n_singular++;
+        }
+        else{
+          continue;
+        }
+			}
+			else{
+				initMatrix(&m_inv);
+				MatrixInversion(m, &m_inv);
+				SaveMatrixToFile(m, tmx);
+				SaveMatrixToFile(m_inv, timx);
+				DelMatrix(&m_inv);
+        n_train++;
+			}
+			DelMatrix(&m);
+    }
+
+    /*
+     * Generate the external testing set
+     */
+    n_val = 0;
+    while(n_val < n_max){
       NewMatrix(&m, msize, msize);
       MatrixRandomFill(m, rmin, rmax);
       det = (int)floor(fabs(MatrixDeterminant(m)));
 			if(det == 0){
         /* Ops.. a singular matrix was generated... */
-        printf("Ops... this matrix is singular!! -> ");
-        printf("Determinant == %d\n", det);
-				SaveMatrixToFile(m, smx);
+        if(n_singular < n_max){
+          printf("Ops... this matrix is singular!! -> ");
+          printf("Determinant == %d\n", det);
+  				SaveMatrixToFile(m, smx);
+          initMatrix(&m_inv);
+          MatrixMoorePenrosePseudoinverse(m, &m_inv);
+          SaveMatrixToFile(m_inv, simx);
+          DelMatrix(&m_inv);
+          n_singular++;
+        }
+        else{
+          continue;
+        }
 			}
 			else{
 				initMatrix(&m_inv);
 				MatrixInversion(m, &m_inv);
-				SaveMatrixToFile(m, dmx);
-				SaveMatrixToFile(m_inv, tmx);
+				SaveMatrixToFile(m, vmx);
+				SaveMatrixToFile(m_inv, vimx);
 				DelMatrix(&m_inv);
-        n++;
+        n_val++;
 			}
 			DelMatrix(&m);
     }
@@ -105,8 +156,7 @@ int main(int argc, char **argv){
 		 * For those matrix determinant must be 0 and
 		 * thus no inverse matrix is possible.
 		 */
-    n = 0;
-    while(n < n_max){
+    while(n_singular < n_max){
       /*
       Simplest method to get singular matrix
       A is a n x n square matrix.
@@ -124,17 +174,14 @@ int main(int argc, char **argv){
       int det = (int)floor(fabs(MatrixDeterminant(m)));
       if(det == 0){
 				SaveMatrixToFile(m, smx);
-        n++;
+        initMatrix(&m_inv);
+        MatrixMoorePenrosePseudoinverse(m, &m_inv);
+        SaveMatrixToFile(m_inv, simx);
+        DelMatrix(&m_inv);
+        n_singular++;
 			}
 			else{
-        /* Ops... this matrix is not singular!! */
-				printf("Ops... this matrix is not singular!! -> ");
-        printf("Determinant = %d\n", det);
-        initMatrix(&m_inv);
-        MatrixInversion(m, &m_inv);
-        SaveMatrixToFile(m, dmx);
-        SaveMatrixToFile(m_inv, tmx);
-        DelMatrix(&m_inv);
+        continue;
 			}
       DelMatrix(&m);
 

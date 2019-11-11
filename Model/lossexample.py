@@ -28,7 +28,12 @@ def loss_example(y_true, y_pred):
         eye.append(np.eye(3))
     yt_inv = np.linalg.inv(y_true)
     r = np.matmul(yt_inv, y_pred)
-    return np.linalg.norm((eye-r))
+    r = eye-r
+    r = np.abs(r)
+    r = np.square(r)
+    r = np.sum(np.sum(r, axis=1), axis=1)
+    norms = np.sqrt(r)
+    return np.array(norms).mean()
 
 
 def loss_example_tf(y_true, y_pred):
@@ -47,7 +52,14 @@ def loss_example_tf(y_true, y_pred):
     res = tf.reduce_mean(tf.map_fn(single_floss, elems, dtype=tf.float32))
     """
     eye = tf.eye(3, batch_shape=[tf.shape(yt)[0]])
-    res = tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(yt), yp)))
+    res = tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(yt), yp))
+    res = tf.abs(res)
+    res = tf.square(res)
+    res = tf.reduce_sum(tf.reduce_sum(res, axis=1), axis=1)
+    res = tf.sqrt(res)
+    print(res.eval())
+    # res = tf.norm(elems)
+    res = tf.reduce_mean(res)
     retval = res.eval()
     sess.close()
     return retval
@@ -70,6 +82,6 @@ if __name__ in "__main__":
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
-    print("The loss result must be: 0.29105101")
+    print("The loss result must be: 0.20402847")
     print("Numpy implementation %.8f" % (loss_example(y_true, y_pred)))
     print("TF implementation %.8f" % (loss_example_tf(y_true, y_pred)))
