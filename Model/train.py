@@ -78,9 +78,14 @@ class NN(object):
         # loss = || I - AA^{-1}||
         # y_true is the true inverse
         # y_pred is the predicted inverse
-        # return tf.reduce_mean(tf.square(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred))
-        # return tf.linalg.norm(tf.eye(self.msize) - tf.reduce_mean(tf.linalg.inv(y_true)*y_pred), ord='euclidean')
-        return tf.reduce_mean(tf.linalg.norm(tf.eye(self.msize) - tf.linalg.inv(y_true)*y_pred, ord='euclidean'))
+        # A is the original not inverted matrix
+        # A^{-1} is the inverted matrix
+        # I is the identiy matrix
+        def single_floss(elems):
+            eye = tf.eye(self.msize)
+            return tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(elems[0]), elems[1])), ord='euclidean')
+        elems_ = (y_true, y_pred)
+        return tf.reduce_mean(tf.map_fn(single_floss, elems_, dtype=tf.float32))
 
     def build_model(self, msize, nunits):
         model = Sequential()
@@ -99,9 +104,9 @@ class NN(object):
                       optimizer=optimizers.Adam(),
                       metrics=['mse', 'mae', self.floss])
         """
-        model.compile(loss="mae",
+        model.compile(loss=self.floss,
                       optimizer=optimizers.Adam(lr=0.0005),
-                      metrics=['mse', 'mae'])
+                      metrics=['mse', 'mae', self.floss])
 
         return model
 
