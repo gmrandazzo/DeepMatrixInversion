@@ -2,11 +2,12 @@
 import tensorflow as tf
 import numpy as np
 
+
 def loss_example(y_true, y_pred):
     """
         Numpy version of the loss function
         Loss = norm(abs(Identity - A*A^-1))
-    """
+
     norm_sum = 0.
     for i in range(len(y_true)):
         msize = y_true[1].shape[1]
@@ -21,6 +22,13 @@ def loss_example(y_true, y_pred):
         r = np.dot(yt_inv, y_pred[i])
         norm_sum += np.linalg.norm((eye-r))
     return norm_sum/float(len(y_true))
+    """
+    eye = []
+    for i in range(len(y_true)):
+        eye.append(np.eye(3))
+    yt_inv = np.linalg.inv(y_true)
+    r = np.matmul(yt_inv, y_pred)
+    return np.linalg.norm((eye-r))
 
 
 def loss_example_tf(y_true, y_pred):
@@ -30,11 +38,16 @@ def loss_example_tf(y_true, y_pred):
     sess = tf.InteractiveSession()
     yt = tf.constant(y_true, dtype=tf.float32)
     yp = tf.constant(y_pred, dtype=tf.float32)
+    """
+    Version iterate trough samples...
     def single_floss(elems):
         eye = tf.eye(3)
         return tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(elems[0]), elems[1])), ord='euclidean')
     elems = (yt, yp)
     res = tf.reduce_mean(tf.map_fn(single_floss, elems, dtype=tf.float32))
+    """
+    eye = tf.eye(3, batch_shape=[tf.shape(yt)[0]])
+    res = tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(yt), yp)))
     retval = res.eval()
     sess.close()
     return retval
@@ -57,6 +70,6 @@ if __name__ in "__main__":
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
-    print("The loss result must be: 0.20402843")
+    print("The loss result must be: 0.29105101")
     print("Numpy implementation %.8f" % (loss_example(y_true, y_pred)))
     print("TF implementation %.8f" % (loss_example_tf(y_true, y_pred)))

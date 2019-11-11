@@ -81,16 +81,24 @@ class NN(object):
         # A is the original not inverted matrix
         # A^{-1} is the inverted matrix
         # I is the identiy matrix
+        """
+        Iterate trough tensor elements in y_true and y_pred
+        WARNING: SLOW!!
         def single_floss(elems):
             eye = tf.eye(self.msize)
             return tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(elems[0]), elems[1])), ord='euclidean')
         elems_ = (y_true, y_pred)
         return tf.reduce_mean(tf.map_fn(single_floss, elems_, dtype=tf.float32))
+        """
+        eye = tf.eye(self.msize,
+                     batch_shape=[tf.shape(y_true)[0]])
+        return tf.norm(tf.subtract(eye, tf.linalg.matmul(tf.linalg.inv(y_true), y_pred)), ord='euclidean')
 
     def build_model(self, msize, nunits):
         model = Sequential()
-        # model.add(BatchNormalization(input_shape=(msize, msize,)))
-        model.add(Flatten(input_shape=(msize, msize, )))
+        model.add(BatchNormalization(input_shape=(msize, msize,)))
+        # model.add(Flatten(input_shape=(msize, msize, )))
+        model.add(Flatten())
         model.add(Dense(nunits, activation='relu'))
         model.add(Dropout(0.1))
         model.add(Dense(nunits, activation='relu'))
