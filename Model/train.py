@@ -36,6 +36,7 @@ def main():
         print("\n Usage: %s --inputmx [input file] --inversemx [input file] --epochs [int] --batch_size [int] --nunits [int]" % (argv[0]))
     else:
         nn = NN(args.inputmx, args.inversemx)
+        nn.verbose=1
         nn.train(args.batch_size,
                  args.epochs,
                  args.nunits,

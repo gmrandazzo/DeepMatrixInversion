@@ -10,13 +10,18 @@
 # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
+import tensorflow as tf
+if int(tf.__version__[0]) == 1:
+    import keras as keras
+else:
+    from tensorflow import keras as keras
+
 from keras import backend as K
 # Some memory clean-up
 
 from datetime import datetime
 import numpy as np
 from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
-from keras.engine.input_layer import Input
 from keras.layers import Flatten, Dense, Dropout, Reshape, BatchNormalization
 from keras.models import Sequential, Model
 from keras.models import load_model
@@ -30,8 +35,6 @@ from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import r2_score
 from sys import argv
 import time
-import tensorflow as tf
-
 
 K.clear_session()
 
@@ -78,7 +81,10 @@ class NN(object):
             return
         self.msize = self.X.shape[1]
         self.verbose = 0
-        self.sess = K.get_session()
+        if int(tf.__version__[0]) == 1:
+            self.sess = K.get_session()
+        else:
+            self.sess = tf.compat.v1.Session()
 
     def floss(self, y_true, y_pred):
         # loss = || I - AA^{-1}||
@@ -170,6 +176,7 @@ class NN(object):
                             random_state=datetime.now().microsecond)
         mid = 0
         for train_index, test_index in rkf.split(self.X):
+            K.clear_session()
             model = self.build_model(self.msize, nunits)
             print(model.summary())
             X_subset, X_test = self.X[train_index], self.X[test_index]
