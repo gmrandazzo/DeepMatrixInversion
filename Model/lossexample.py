@@ -57,7 +57,7 @@ def loss_example_tf(y_true, y_pred):
     res = tf.square(res)
     res = tf.reduce_sum(tf.reduce_sum(res, axis=1), axis=1)
     res = tf.sqrt(res)
-    print(res.eval())
+    # print(res.eval())
     # res = tf.norm(elems)
     res = tf.reduce_mean(res)
     retval = res.eval()
