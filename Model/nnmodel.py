@@ -13,19 +13,25 @@
 import tensorflow as tf
 if int(tf.__version__[0]) == 1:
     import keras as keras
+    from keras import backend as K
+    from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
+    from keras.layers import Flatten, Dense, Dropout, Reshape, BatchNormalization
+    from keras.models import Sequential, Model
+    from keras.models import load_model
+    from keras import optimizers
 else:
     from tensorflow import keras as keras
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.callbacks import Callback, TensorBoard, ModelCheckpoint
+    from tensorflow.keras.layers import Flatten, Dense, Dropout, Reshape, BatchNormalization
+    from tensorflow.keras.models import Sequential, Model
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras import optimizers
 
-from keras import backend as K
 # Some memory clean-up
 
 from datetime import datetime
 import numpy as np
-from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
-from keras.layers import Flatten, Dense, Dropout, Reshape, BatchNormalization
-from keras.models import Sequential, Model
-from keras.models import load_model
-from keras import optimizers
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.model_selection import RepeatedKFold

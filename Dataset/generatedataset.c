@@ -96,7 +96,7 @@ int main(int argc, char **argv){
           printf("Determinant == %d\n", det);
   				SaveMatrixToFile(m, smx);
           initMatrix(&m_inv);
-          MatrixMoorePenrosePseudoinverse(m, &m_inv);
+          MatrixMoorePenrosePseudoinverse(m, m_inv);
           SaveMatrixToFile(m_inv, simx);
           DelMatrix(&m_inv);
           n_singular++;
@@ -107,7 +107,7 @@ int main(int argc, char **argv){
 			}
 			else{
 				initMatrix(&m_inv);
-				MatrixInversion(m, &m_inv);
+				MatrixInversion(m, m_inv);
 				SaveMatrixToFile(m, tmx);
 				SaveMatrixToFile(m_inv, timx);
 				DelMatrix(&m_inv);
@@ -131,7 +131,7 @@ int main(int argc, char **argv){
           printf("Determinant == %d\n", det);
   				SaveMatrixToFile(m, smx);
           initMatrix(&m_inv);
-          MatrixMoorePenrosePseudoinverse(m, &m_inv);
+          MatrixMoorePenrosePseudoinverse(m, m_inv);
           SaveMatrixToFile(m_inv, simx);
           DelMatrix(&m_inv);
           n_singular++;
@@ -142,7 +142,7 @@ int main(int argc, char **argv){
 			}
 			else{
 				initMatrix(&m_inv);
-				MatrixInversion(m, &m_inv);
+				MatrixInversion(m, m_inv);
 				SaveMatrixToFile(m, vmx);
 				SaveMatrixToFile(m_inv, vimx);
 				DelMatrix(&m_inv);
@@ -175,8 +175,8 @@ int main(int argc, char **argv){
       if(det == 0){
 				SaveMatrixToFile(m, smx);
         initMatrix(&m_inv);
-        MatrixMoorePenrosePseudoinverse(m, &m_inv);
-        SaveMatrixToFile(m_inv, simx);
+        MatrixMoorePenrosePseudoinverse(m, m_inv);
+	SaveMatrixToFile(m_inv, simx);
         DelMatrix(&m_inv);
         n_singular++;
 			}
