@@ -1,0 +1,48 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry]
+name = "deepmatrixinversion"
+version = "1.0.0"
+description = "A simple tool invert matrix using neural networks"
+authors = ["Giuseppe Marco Randazzo <gmrandazzo@gmail.com>"]
+readme = "README.md"
+license = "lglpv3"
+repository = "https://github.com/gmrandazzo/DeepMatrixInversion"
+packages = [{include = "deepmatrixinversion", from = "src"}]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Topic :: Scientific/Engineering"
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+scikit-learn = "^1.5.2"
+matplotlib = "^3.9.2"
+tensorflow  = [
+    { version = "^2.17.0", extras = ["and-cuda"], markers = "sys_platform == 'linux'" },
+    { version = "^2.17.0", markers = "sys_platform == 'darwin'" }
+]
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pre-commit = "^3.3.3"
+tox = "^4.2.3"
+
+[tool.poetry.scripts]
+dmxtrain = "deepmatrixinversion.train:main"
+dmxinvert = "deepmatrixinversion.predict:main"
+dmxtraingenerator = "deepmatrixinversion.generate_dataset:main"
+dmxdatasetverify = "deepmatrixinversion.verify_dataset:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -17,10 +17,8 @@ DeepMatrixInversion is currently property of Giuseppe Marco Randazzo.
 Dependencies
 ============
 
-- python version  3
+- python version  3.9
 - numpy
 - sklearn
 - matplotlib
-- keras
 - tensorflow
-- libscientific
