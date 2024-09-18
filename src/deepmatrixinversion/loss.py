@@ -25,10 +25,10 @@ def floss(y_true, y_pred):
     A is the original not inverted matrix
     A^{-1} is the inverted matrix
     I is the identiy matrix
-    
+
     y_true is the true inverse
     y_pred is the predicted inverse
-    
+
     """
 
     """
@@ -37,10 +37,7 @@ def floss(y_true, y_pred):
     shape = tf.shape(y_true)
     batch_size = shape[0]
     msize = shape[1]
-    eye = tf.eye(
-        msize,
-        batch_shape=[batch_size]
-    )
+    eye = tf.eye(msize, batch_shape=[batch_size])
     res = tf.linalg.matmul(tf.linalg.inv(y_true), y_pred)
     res = tf.cast(res, tf.float32)
     res = tf.subtract(eye, res)
