@@ -172,7 +172,7 @@ class NN:
         model = self.build_model()
         for _ in range(num_epochs):
             X, Y = generate_matrix_inversion_dataset(
-                1000000, 3, self.range_min, self.range_max
+                1000000, self.msize, self.range_min, self.range_max
             )
             X_subset, X_val, Y_subset, Y_val = train_test_split(
                 X,
@@ -251,7 +251,7 @@ class NN:
             )
 
         X, Y = generate_matrix_inversion_dataset(
-            1000000, 3, self.range_min, self.range_max
+            1000000, self.msize, self.range_min, self.range_max
         )
         models = self.load_models(mout_path)
         predictions = [[] for _ in range(len(Y))]
