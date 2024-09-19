@@ -16,7 +16,7 @@ from tensorflow.keras.utils import register_keras_serializable
 
 
 @register_keras_serializable()
-def floss(y_true, y_pred):
+def floss(y_true, y_pred, alpha=0.5):
     """
     Loss function
 
@@ -46,4 +46,6 @@ def floss(y_true, y_pred):
     res = tf.reduce_sum(tf.reduce_sum(res, axis=1), axis=1)
     res = tf.sqrt(res)
     res = tf.reduce_mean(res)
-    return res
+    mse_loss = tf.reduce_mean(tf.square(y_true - y_pred))
+    total_loss = alpha * mse_loss + (1 - alpha) * res
+    return total_loss
