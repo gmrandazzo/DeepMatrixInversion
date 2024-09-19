@@ -45,7 +45,11 @@ def generate_matrix_inversion_dataset(num_samples, matrix_size, min_val=-1, max_
     X = []
     Y = []
     while len(X) < num_samples:
-        matrices = np.random.random(((num_samples - len(X)), matrix_size, matrix_size)) * (max_val - min_val) + min_val
+        matrices = (
+            np.random.random(((num_samples - len(X)), matrix_size, matrix_size))
+            * (max_val - min_val)
+            + min_val
+        )
         matrices = matrices[np.abs(np.linalg.det(matrices)) > 0.1]
         X.extend(matrices.tolist())
         Y.extend(np.linalg.inv(matrices).tolist())

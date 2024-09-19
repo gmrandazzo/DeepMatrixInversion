@@ -20,7 +20,7 @@ import toml
 from sklearn.metrics import mean_absolute_error as mae
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import r2_score
-from sklearn.model_selection import RepeatedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -87,22 +87,6 @@ class NN:
         )
         return model
         # model.compile(loss="mean_squared_error", optimizer=tf.keras.optimizers.Adam(learning_rate=.00001))
-
-    def build_model___(self, msize, nunits):
-        model = Sequential()
-        model.add(InputLayer(input_shape=(msize, msize)))
-        model.add(Flatten())
-        model.add(Dense(nunits, activation="relu"))
-        for _ in range(7):
-            model.add(ResidualBlock(nunits, 4))
-        model.add(Dense(msize * msize, activation="linear"))
-        model.add(Reshape((msize, msize)))
-        model.compile(
-            loss=floss,
-            optimizer=optimizers.Adam(learning_rate=1e-4),
-            metrics=["mse", "mae", floss],
-        )
-        return model
 
     def build_model_(self, msize, nunits):
         starting_units = msize**4
