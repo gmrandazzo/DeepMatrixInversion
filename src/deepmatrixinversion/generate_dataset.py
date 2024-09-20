@@ -16,33 +16,32 @@ from deepmatrixinversion.dataset import (
     generate_matrix_inversion_dataset,
     generate_singular_matrix_inversion_dataset,
 )
-from deepmatrixinversion.io import write_train_test_validation_sets
+from deepmatrixinversion.io import write_dataset
 
 
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print(
-            f"Usage {sys.argv[0]} [matrix size] [number of samples] [range min] [range max]"
+            f"Usage {sys.argv[0]} [matrix size] [number of samples] [range min] [range max] [outname_prefix]"
         )
         exit(0)
     matrix_size = int(sys.argv[1])
     num_samples = int(sys.argv[2])
     min_val = float(sys.argv[3])
     max_val = float(sys.argv[4])
+    out_prefix = sys.argv[5]
 
     # Generate dataset
-    num_samples = 10000
-    matrix_size = 3
     X, Y = generate_matrix_inversion_dataset(
         num_samples,
         matrix_size,
         min_val,
         max_val,
     )
-
     # verify_matrix_inversion(X, Y)
-
-    write_train_test_validation_sets(X, Y, matrix_size, "")
+    
+    write_dataset(X, f'{out_prefix}_matrices_{matrix_size}x{matrix_size}.mx')
+    write_dataset(Y, f'{out_prefix}_matrices_inverted_{matrix_size}x{matrix_size}.mx')
 
     X_Singular, Y_Singular = generate_singular_matrix_inversion_dataset(
         num_samples,
@@ -52,8 +51,8 @@ def main():
         max_val,
     )
     # verify_pseudo_inversion(X_Singular, Y_Singular)
-    write_train_test_validation_sets(X_Singular, Y_Singular, matrix_size, "singular")
-
+    write_dataset(X_Singular, f'{out_prefix}_singular_matrices_{matrix_size}x{matrix_size}.mx')
+    write_dataset(Y_Singular, f'{out_prefix}_singular_matrices_pseudoinverted_{matrix_size}x{matrix_size}.mx')
 
 if __name__ in "__main__":
     main()

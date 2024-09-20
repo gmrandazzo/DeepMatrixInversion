@@ -23,7 +23,7 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.layers import (
     BatchNormalization,
     Dense,
@@ -35,6 +35,7 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Sequential, load_model
 
 from deepmatrixinversion.dataset import generate_matrix_inversion_dataset
+from deepmatrixinversion.io import read_dataset
 from deepmatrixinversion.loss import floss
 
 # Some memory clean-up
@@ -42,13 +43,41 @@ from deepmatrixinversion.loss import floss
 K.clear_session()
 
 
+class BatchMetricsCallback(tf.keras.callbacks.Callback):
+    def __init__(self, log_dir):
+        super().__init__()
+        self.writer = tf.summary.create_file_writer(log_dir)
+        self.batch_count = 0
+
+    def on_train_batch_end(self, batch, logs=None):
+        with self.writer.as_default():
+            tf.summary.scalar("batch_loss", logs["loss"], step=self.batch_count)
+            tf.summary.scalar("batch_mse", logs["mse"], step=self.batch_count)
+            tf.summary.scalar("batch_mae", logs["mae"], step=self.batch_count)
+            self.batch_count += 1
+
+    def on_epoch_end(self, epoch, logs=None):
+        with self.writer.as_default():
+            tf.summary.scalar("epoch_loss", logs["loss"], step=epoch)
+            tf.summary.scalar("epoch_mse", logs["mse"], step=epoch)
+            tf.summary.scalar("epoch_mae", logs["mae"], step=epoch)
+
+
 class NN:
-    def __init__(self, msize: int, range_min: float, range_max: float):
+    def __init__(
+        self,
+        msize: int = 3,
+        range_min: float = -1,
+        range_max: float = 1,
+        models_path: str = None,
+    ):
         self.msize = int(msize)
         self.range_min = range_min
         self.range_max = range_max
         self.scaling_factor = range_max - range_min
         self.verbose = 1
+        if models_path:
+            self.models = self.load_models(models_path)
 
     def get_scaling_factor(
         self,
@@ -157,8 +186,14 @@ class NN:
             models.append(load_model(str(file_), custom_objects={"floss": floss}))
         with open(f"{Path(model_path)}/config.toml", "r") as file:
             configs = toml.load(file)
-            if "scaling_factor" in configs:
-                self.scaling_factor = float(configs["scaling_factor"])
+            config_mappings = {
+                "scaling_factor": "scaling_factor",
+                "range_min": "range_min",
+                "range_max": "range_max",
+            }
+            for config_key, attr_name in config_mappings.items():
+                if config_key in configs:
+                    setattr(self, attr_name, float(configs[config_key]))
         return models
 
     def train_single_model(
@@ -169,8 +204,32 @@ class NN:
         mout_path: str = "./",
         outname_suffix: str = "",
     ):
+        logfile = "./logs/#b%d_#e%d_#mid_%d_" % (
+            batch_size,
+            num_epochs,
+            model_id,
+        )
+        logfile += outname_suffix
+
+        model_output = "%s/%d.keras" % (str(mout_path.absolute()), model_id)
+        """
+        TensorBoard(
+                log_dir=logfile,
+                histogram_freq=0,
+                write_graph=False,
+                write_images=False,
+            ),
+        """
+        tb_callback = BatchMetricsCallback(logfile)
+        callbacks_ = [
+            tb_callback,
+            ModelCheckpoint(
+                model_output, monitor="val_loss", verbose=0, save_best_only=True
+            ),
+        ]
+
         model = self.build_model()
-        for _ in range(num_epochs):
+        for epoch in range(num_epochs):
             X, Y = generate_matrix_inversion_dataset(
                 1000000, self.msize, self.range_min, self.range_max
             )
@@ -187,27 +246,8 @@ class NN:
                 random_state=datetime.now().microsecond,
             )
 
-            logfile = "./logs/#b%d_#e%d_#mid_%d_" % (
-                batch_size,
-                num_epochs,
-                model_id,
-            )
-            logfile += outname_suffix
-
-            model_output = "%s/%d.keras" % (str(mout_path.absolute()), model_id)
-            callbacks_ = [
-                TensorBoard(
-                    log_dir=logfile,
-                    histogram_freq=0,
-                    write_graph=False,
-                    write_images=False,
-                ),
-                ModelCheckpoint(
-                    model_output, monitor="val_loss", verbose=0, save_best_only=True
-                ),
-            ]
             # Y_train/self.scaling_factor # normalize target values, large target values hamper training
-            model.fit(
+            history = model.fit(
                 X_train,
                 Y_train / self.scaling_factor,
                 epochs=1,
@@ -216,11 +256,21 @@ class NN:
                 validation_data=(X_val, Y_val / self.scaling_factor),
                 callbacks=callbacks_,
             )
-            model_ = load_model(model_output, custom_objects={"floss": floss})
-            Y_test_pred = model_.predict(X_test) * self.scaling_factor
-            mse = tf.reduce_mean(tf.square(Y_test - Y_test_pred))
-            print(f"Current MSE in testing: {mse}")
-            del model_
+
+            with tb_callback.writer.as_default():
+                tf.summary.scalar("epoch_loss", history.history["loss"][0], step=epoch)
+                tf.summary.scalar("epoch_mse", history.history["mse"][0], step=epoch)
+                tf.summary.scalar("epoch_mae", history.history["mae"][0], step=epoch)
+                if (epoch + 1) % 100 == 0:
+                    model_ = load_model(model_output, custom_objects={"floss": floss})
+                    Y_test_pred = model_.predict(X_test) * self.scaling_factor
+                    mse = tf.reduce_mean(tf.square(Y_test - Y_test_pred))
+                    del model_
+                    print(
+                        f"Epoch {epoch + 1}/num_epochs, Loss: {history.history['loss'][0]:.4f}, "
+                        f"MSE: {history.history['mse'][0]:.4f}, MAE: {history.history['mae'][0]:.4f} "
+                        f"Current MSE in testing: {mse}"
+                    )
         return model
 
     def train(
@@ -239,6 +289,8 @@ class NN:
 
         with open(f"{mout_path}/config.toml", "w") as file:
             data = {"scaling_factor": self.scaling_factor}
+            data = {"range_min": self.range_min}
+            data = {"range_max": self.range_max}
             toml.dump(data, file)
 
         for model_id in range(n_repeats):
@@ -284,17 +336,19 @@ class NN:
         plt.ylabel("Predicted inverted matrix values")
         plt.savefig("training_validation.png", dpi=300, bbox_inches="tight")
 
-    def predict(self, model_path, pred_inverse_out):
+    def predict(
+        self, inputmx: str, invertedmx: str = None, pred_inverse_out: str = None
+    ):
         # Load input matrix to predicts
         # Load models
-        models = self.load_models(model_path)
+        X = read_dataset(inputmx)
         inverse = []
-        for row in self.X:
+        for row in X:
             inv = []
-            for model in models:
+            for model in self.models:
                 inv.append(model.predict(np.array([row]), verbose=False))
             inv = np.array(inv)
-            inverse.append(inv.mean(axis=0).tolist()[0] * self.scaling_factor)
+            inverse.append(inv.mean(axis=0)[0] * self.scaling_factor)
         fo = open(pred_inverse_out, "w")
         for inv in inverse:
             for i in range(self.msize):
@@ -304,7 +358,8 @@ class NN:
             fo.write("END\n")
         fo.close()
 
-        if self.y is not None:
+        if invertedmx is not None:
+            Y = read_dataset(invertedmx)
             # Calculate the prediction score!
             ypred = []
             ytrue = []
@@ -312,7 +367,7 @@ class NN:
                 for row in inverse[i]:
                     for number in row:
                         ypred.append(number)
-                for row in self.y[i]:
+                for row in Y[i]:
                     for number in row:
                         ytrue.append(number)
             ytrue = np.array(ytrue)

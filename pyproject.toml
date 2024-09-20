@@ -41,7 +41,7 @@ tox = "^4.2.3"
 [tool.poetry.scripts]
 dmxtrain = "deepmatrixinversion.train:main"
 dmxinvert = "deepmatrixinversion.predict:main"
-dmxtraingenerator = "deepmatrixinversion.generate_dataset:main"
+dmxdatagenerator = "deepmatrixinversion.generate_dataset:main"
 dmxdatasetverify = "deepmatrixinversion.verify_dataset:main"
 
 [build-system]

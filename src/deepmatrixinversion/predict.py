@@ -19,10 +19,8 @@ from deepmatrixinversion.nnmodel import NN
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inputmx", default=None, type=str, help="input data matrix")
-    parser.add_argument(
-        "--exptarget", default=None, type=str, help="Experimental target data matrix"
-    )
+    parser.add_argument("--inputmx", default=None, type=str, help="Matrices to invert ")
+    parser.add_argument("--invtarget", default=None, type=str, help="Inverted matrices")
     parser.add_argument("--model", default=None, type=str, help="Model directory")
     parser.add_argument(
         "--inverseout", default="Model", type=str, help="inverse output matrix file"
@@ -32,16 +30,20 @@ def main():
     if args.inputmx is None or args.model is None:
         print("ERROR! Please specify input file matrix and a model directory!")
         print(
-            "\n Prediction usage: %s --inputmx [input file] --inverseout [output file] --model [path of the model]"
+            "\n Prediction usage: %s --inputmx [Matrices to invert] --inverseout [output ML inverted matrices] --model [path of the model]"
             % (argv[0])
         )
         print(
-            "\n Prediction with target evaluation usage: %s --inputmx [input file] --exptarget [experimental target file] --inverseout [output file] --model [path of the model]"
+            "\n Prediction with target evaluation usage: %s --inputmx [Matrices to invert] --invtarget [Experimental inverted matrices] --inverseout [output ML inverted matrices] --model [path of the model]"
             % (argv[0])
         )
     else:
-        nn = NN(args.inputmx, args.exptarget)
-        nn.predict(args.model, args.inverseout)
+        nn = NN(models_path=args.model)
+        nn.predict(
+            inputmx=args.inputmx,
+            invertedmx=args.invtarget,
+            pred_inverse_out=args.inverseout,
+        )
 
 
 if __name__ == "__main__":
