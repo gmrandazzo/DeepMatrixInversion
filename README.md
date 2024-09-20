@@ -8,6 +8,10 @@ Inverting matrices presents unique challenges for neural networks, primarily due
 ## The ResNet Advantage
 The ResNet architecture, known for its ability to learn deep representations through residual connections, has proven effective in tackling matrix inversion. With millions of parameters, this network can capture intricate patterns within the data that simpler models cannot. However, this complexity comes at a cost: substantial training data are required for effective generalization.
 
+![Predicted Inverted Matrix](https://github.com/gmrandazzo/DeepMatrixInversion/blob/master/Results/Figure_1_Inverted_Matrix_Predicted_3x3.png)
+*Figure 1: Visualization of a neural network predicted inverted matrix for a set of matrices 3x3 never seen in the dataset*
+
+
 ### Loss Function
 
 To evaluate the performance of the neural network in predicting matrix inversions, a specific loss function is employed:
@@ -46,6 +50,9 @@ This loss function inherently assumes that the matrices being inverted are non-s
 ### The Problem of Singular Matrices
 
 One significant limitation when using neural networks for matrix inversion is their inability to handle singular matrices effectively. A singular matrix does not have an inverse; thus, any attempt by a neural network to predict an inverse for such matrices will yield incorrect results. In practice, if a singular matrix is presented during training or inference, the network may still output a result, but this output will not be valid or meaningful. This limitation underscores the importance of ensuring that training data consists of non-singular matrices whenever possible.
+
+![Singular Matrix Prediction](https://github.com/gmrandazzo/DeepMatrixInversion/blob/master/Results/Figure_2_Singular_Matrix_Predicted_3x3.png)
+*Figure 2: Comparison of model prediction for singular matrices versus pseudoinversions. Note that the model will produce results regardless of matrix singularity.*
 
 ## Data Requirements and Overfitting
 Research indicates that a ResNet model can memorize a good amount of samples without significant loss of accuracy. However, increasing the dataset size to 10 million samples may lead to severe overfitting. This overfitting occurs despite the large volume of data, highlighting that simply increasing dataset size does not guarantee improved generalization for complex models. To address this challenge, a continuous data generation strategy can be adopted. Instead of relying on a static dataset, samples can be generated on the fly and fed to the network as they are created. This approach, which is crucial in mitigating overfitting, not only provides a diverse range of training examples but also ensures that the model is exposed to a constantly evolving dataset.
