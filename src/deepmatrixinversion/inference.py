@@ -9,13 +9,15 @@ go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 
 """
 
-from deepmatrixinversion.nnmodel import NN
 import numpy as np
 
+from deepmatrixinversion.nnmodel import NN
+
+
 class MatrixInversionInference:
-    def __init__(self, models_path:str, invert_mode='nn'):
+    def __init__(self, models_path: str, invert_mode="nn"):
         self.nn = NN(models_path=models_path)
-        if invert_mode == 'nn':
+        if invert_mode == "nn":
             self.inv = self.nn.predict
         else:
             self.inv = np.linalg.inv
@@ -32,14 +34,16 @@ class MatrixInversionInference:
         D = mx[row_mid:, col_mid:]
         return A, B, C, D
 
-    def block_matrix_inverse(self,
-            A: np.array,
-            B: np.array,
-            C: np.array,
-            D: np.array,) -> np.array:
+    def block_matrix_inverse(
+        self,
+        A: np.array,
+        B: np.array,
+        C: np.array,
+        D: np.array,
+    ) -> np.array:
         """
         Sherman-Morrison-Woodbury matrix block inversion formula
-        
+
         P = [ A  B ]
             [ C  D ]
 
@@ -62,10 +66,12 @@ class MatrixInversionInference:
         S_inv = self.inv(S)
 
         # Construct the inverse of the block matrix
-        P_inv = np.block([
-            [A_inv + A_inv @ B @ S_inv @ C @ A_inv, -A_inv @ B @ S_inv],
-            [-S_inv @ C @ A_inv, S_inv]
-        ])
+        P_inv = np.block(
+            [
+                [A_inv + A_inv @ B @ S_inv @ C @ A_inv, -A_inv @ B @ S_inv],
+                [-S_inv @ C @ A_inv, S_inv],
+            ]
+        )
         return P_inv
 
     def invert(self, mxlst: list) -> np.array:
@@ -76,9 +82,11 @@ class MatrixInversionInference:
         for mx in mxlst:
             if mx.shape[0] == self.nn.msize:
                 inv.append(self.nn.predict(mx))
-            elif mx.shape[0] % 2 == 0 and  mx.shape[0]/2. == self.nn.msize:
+            elif mx.shape[0] % 2 == 0 and mx.shape[0] / 2.0 == self.nn.msize:
                 A, B, C, D = self.split_matrix(mx)
                 inv.append(self.block_matrix_inverse(A, B, C, D))
             else:
-                raise ValueError("The model is not suitted to predict the input matrix.")
+                raise ValueError(
+                    "The model is not suitted to predict the input matrix."
+                )
         return np.array(inv)

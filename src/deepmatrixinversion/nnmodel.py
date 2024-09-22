@@ -58,14 +58,14 @@ class NN:
         range_min: float = -1,
         range_max: float = 1,
         nunits: int = 128,
-        n_layers: int = 7,
+        nlayers: int = 7,
         models_path: str = None,
     ):
         self.msize = int(msize)
         self.range_min = range_min
         self.range_max = range_max
         self.nunits = nunits
-        self.n_layers = n_layers
+        self.nlayers = nlayers
         self.scaling_factor = range_max - range_min
         self.verbose = 1
         self.config_mappings = {
@@ -94,7 +94,7 @@ class NN:
         inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
         x = tf.keras.layers.Flatten()(inp)
         x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
-        for _ in range(self.n_layers):
+        for _ in range(self.nlayers):
             skip = x
             for _ in range(4):
                 y = tf.keras.layers.Dense(self.nunits * 2, activation="relu")(x)
@@ -121,7 +121,7 @@ class NN:
         inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
         x = tf.keras.layers.Flatten()(inp)
         x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
-        for _ in range(self.n_layers):
+        for _ in range(self.nlayers):
             x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
         x = tf.keras.layers.Dense(self.msize * self.msize)(x)
         x = tf.keras.layers.Reshape([self.msize, self.msize])(x)
@@ -241,16 +241,9 @@ class NN:
         mout_path.mkdir()
 
         with open(f"{mout_path}/config.toml", "w") as file:
-            data = {
-                "msize": self.msize,
-                "scaling_factor": self.scaling_factor,
-                "range_min": self.range_min,
-                "range_max": self.range_max,
-                "nunits": self.nunits,
-                "nlayers": self.n_layers,
-            }
-            # for config_key, (attr_name, _) in self.config_mappings.items():
-            #    data[config_key] = getattr(self, config_key)
+            data = {}
+            for config_key, (attr_name, _) in self.config_mappings.items():
+                data[config_key] = getattr(self, attr_name, None)
             toml.dump(data, file)
 
         from_id = len(self.models) + 1
