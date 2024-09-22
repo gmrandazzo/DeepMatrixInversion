@@ -14,7 +14,9 @@ go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 import argparse
 from sys import argv
 
-from deepmatrixinversion.nnmodel import NN
+from deepmatrixinversion.analytics import plot_exp_vs_pred
+from deepmatrixinversion.inference import MatrixInversionInference
+from deepmatrixinversion.io import read_dataset, write_dataset
 
 
 def main():
@@ -23,7 +25,13 @@ def main():
     parser.add_argument("--invtarget", default=None, type=str, help="Inverted matrices")
     parser.add_argument("--model", default=None, type=str, help="Model directory")
     parser.add_argument(
+        "--invert_mode", default="nn", type=str, help="Method: nn or numpy"
+    )
+    parser.add_argument(
         "--inverseout", default="Model", type=str, help="inverse output matrix file"
+    )
+    parser.add_argument(
+        "--plotout", default=None, type=str, help="Plot output screen or file"
     )
 
     args = parser.parse_args(argv[1:])
@@ -38,12 +46,17 @@ def main():
             % (argv[0])
         )
     else:
-        nn = NN(models_path=args.model)
-        nn.predict(
-            inputmx=args.inputmx,
-            invertedmx=args.invtarget,
-            pred_inverse_out=args.inverseout,
+        mxinference = MatrixInversionInference(
+            models_path=args.model, invert_mode=args.invert_mode
         )
+        mxlst = read_dataset(args.inputmx)
+        invpred = mxinference.invert(mxlst)
+        write_dataset(invpred, args.inverseout)
+        if args.plotout and args.invtarget:
+            invmxlst = read_dataset(args.invtarget)
+            plot_exp_vs_pred(
+                invmxlst, invpred, None if args.plotout == "screen" else args.plotout
+            )
 
 
 if __name__ == "__main__":

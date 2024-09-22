@@ -33,15 +33,10 @@ def main():
 
     # Generate dataset
     X, Y = generate_matrix_inversion_dataset(
-        num_samples,
-        matrix_size,
-        min_val,
-        max_val,
+        num_samples, matrix_size, min_val, max_val, None
     )
-    # verify_matrix_inversion(X, Y)
-    
-    write_dataset(X, f'{out_prefix}_matrices_{matrix_size}x{matrix_size}.mx')
-    write_dataset(Y, f'{out_prefix}_matrices_inverted_{matrix_size}x{matrix_size}.mx')
+    write_dataset(X, f"{out_prefix}_matrices_{matrix_size}x{matrix_size}.mx")
+    write_dataset(Y, f"{out_prefix}_matrices_inverted_{matrix_size}x{matrix_size}.mx")
 
     X_Singular, Y_Singular = generate_singular_matrix_inversion_dataset(
         num_samples,
@@ -50,9 +45,14 @@ def main():
         min_val,
         max_val,
     )
-    # verify_pseudo_inversion(X_Singular, Y_Singular)
-    write_dataset(X_Singular, f'{out_prefix}_singular_matrices_{matrix_size}x{matrix_size}.mx')
-    write_dataset(Y_Singular, f'{out_prefix}_singular_matrices_pseudoinverted_{matrix_size}x{matrix_size}.mx')
+    write_dataset(
+        X_Singular, f"{out_prefix}_singular_matrices_{matrix_size}x{matrix_size}.mx"
+    )
+    write_dataset(
+        Y_Singular,
+        f"{out_prefix}_singular_matrices_pseudoinverted_{matrix_size}x{matrix_size}.mx",
+    )
+
 
 if __name__ in "__main__":
     main()

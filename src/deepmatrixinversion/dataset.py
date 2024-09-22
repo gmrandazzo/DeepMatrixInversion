@@ -41,7 +41,18 @@ def is_invertible(matrix):
     return np.linalg.cond(matrix) < 1 / np.finfo(matrix.dtype).eps
 
 
-def generate_matrix_inversion_dataset(num_samples, matrix_size, min_val=-1, max_val=1):
+def generate_matrix_inversion_dataset(
+    num_samples: int,
+    matrix_size: int,
+    min_val: float = -1.0,
+    max_val: float = 1.0,
+    nn_inv_fnc: any = None,
+):
+    """
+    Generate a matrix inversion dataset.
+    This function use numpy default to generate small dataset and can use a
+    neural network inverse model function (nn_inv_fnc) to do so.
+    """
     X = []
     Y = []
     while len(X) < num_samples:
@@ -50,9 +61,17 @@ def generate_matrix_inversion_dataset(num_samples, matrix_size, min_val=-1, max_
             * (max_val - min_val)
             + min_val
         )
+        # matrices = np.random.uniform(
+        #     min_val,
+        #     max_val,
+        #     ((num_samples - len(X)), matrix_size, matrix_size)
+        # )
         matrices = matrices[np.abs(np.linalg.det(matrices)) > 0.1]
         X.extend(matrices.tolist())
-        Y.extend(np.linalg.inv(matrices).tolist())
+        if nn_inv_fnc:
+            Y.extend(nn_inv_fnc(matrices))
+        else:
+            Y.extend(np.linalg.inv(matrices).tolist())
     return np.array(X), np.array(Y)
 
 
@@ -62,11 +81,11 @@ def verify_matrix_inversion(X: np.array, Y: np.array) -> bool:
         product = np.dot(x, Y[i])
         deviation_from_identity = np.max(np.abs(product - np.eye(matrix_size)))
         if deviation_from_identity > 1e-3:
-            print(f"Deviation from identity: {deviation_from_identity}")
             print(f"Problem with matrix\n {x}")
             print(f"inverted matrix\n {Y[i]}")
+            print(f"Deviation from identity: {deviation_from_identity}")
             return False
-        return True
+    return True
 
 
 def verify_pseudo_inversion(X: np.array, Y: np.array) -> bool:
@@ -74,4 +93,4 @@ def verify_pseudo_inversion(X: np.array, Y: np.array) -> bool:
         if np.allclose(Y[i], np.dot(Y[i], np.dot(x, Y[i]))) is False:
             print(f"Problem with matrix\n{x}")
             return False
-        return True
+    return True

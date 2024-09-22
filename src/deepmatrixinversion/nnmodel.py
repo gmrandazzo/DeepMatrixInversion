@@ -13,29 +13,17 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import toml
-from sklearn.metrics import mean_absolute_error as mae
-from sklearn.metrics import mean_squared_error as mse
-from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.layers import (
-    BatchNormalization,
-    Dense,
-    Dropout,
-    Flatten,
-    InputLayer,
-    Reshape,
-)
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import load_model
 
+from deepmatrixinversion.analytics import plot_exp_vs_pred
 from deepmatrixinversion.dataset import generate_matrix_inversion_dataset
-from deepmatrixinversion.io import read_dataset
 from deepmatrixinversion.loss import floss
 
 # Some memory clean-up
@@ -69,13 +57,26 @@ class NN:
         msize: int = 3,
         range_min: float = -1,
         range_max: float = 1,
+        nunits: int = 128,
+        n_layers: int = 7,
         models_path: str = None,
     ):
         self.msize = int(msize)
         self.range_min = range_min
         self.range_max = range_max
+        self.nunits = nunits
+        self.n_layers = n_layers
         self.scaling_factor = range_max - range_min
         self.verbose = 1
+        self.config_mappings = {
+            "scaling_factor": ["scaling_factor", float],
+            "msize": ["msize", int],
+            "nunits": ["nunits", int],
+            "nlayers": ["nlayers", int],
+            "range_min": ["range_min", float],
+            "range_max": ["range_max", float],
+        }
+        self.models = []
         if models_path:
             self.models = self.load_models(models_path)
 
@@ -92,11 +93,11 @@ class NN:
     def build_model(self):
         inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
         x = tf.keras.layers.Flatten()(inp)
-        x = tf.keras.layers.Dense(128, activation="relu")(x)
-        for _ in range(7):
+        x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
+        for _ in range(self.n_layers):
             skip = x
             for _ in range(4):
-                y = tf.keras.layers.Dense(256, activation="relu")(x)
+                y = tf.keras.layers.Dense(self.nunits * 2, activation="relu")(x)
                 x = tf.keras.layers.concatenate([x, y])
             # x = tf.keras.layers.BatchNormalization()(x)
             x = tf.keras.layers.Dense(
@@ -115,61 +116,16 @@ class NN:
             metrics=["mse", "mae", floss],
         )
         return model
-        # model.compile(loss="mean_squared_error", optimizer=tf.keras.optimizers.Adam(learning_rate=.00001))
 
-    def build_model_(self, msize, nunits):
-        starting_units = msize**4
-        model = Sequential(
-            [
-                Dense(
-                    starting_units,
-                    activation="relu",
-                    input_shape=(
-                        msize,
-                        msize,
-                    ),
-                ),
-                Dense(nunits, activation="relu"),
-                Dense(nunits, activation="relu"),
-                # Dense(nunits, activation='relu'),
-                # Dense(int(nunits/2.), activation='relu'),
-                Dense(msize, activation="linear"),
-                Reshape((msize, msize)),
-            ]
-        )
-
-        model.compile(
-            optimizer=optimizers.Adam(learning_rate=0.001),
-            loss=floss,
-            metrics=["mse", "mae", floss],
-        )
-        return model
-
-    def build_model__(self, msize, nunits):
-        model = Sequential()
-        # model.add(Dense(nunits, activation='relu', input_shape=(msize, msize,)))
-        #
-        # model.add(Flatten())
-        model.add(
-            InputLayer(
-                input_shape=(
-                    msize,
-                    msize,
-                )
-            )
-        )
-        model.add(Flatten())
-        model.add(BatchNormalization())
-        model.add(Dense(msize**4, activation="relu"))
-        # model.add(Dense(nunits, activation='relu'))
-        model.add(Dropout(0.1))
-        # model.add(Dense(nunits, activation='relu'))
-        # model.add(Dropout(0.1))
-        # model.add(Dense(nunits, activation='relu'))
-        # model.add(Dropout(0.1))
-        # model.add(Dense(nunits, activation='relu'))
-        model.add(Dense(msize * msize, activation="linear"))
-        model.add(Reshape((msize, msize)))
+    def build_simple_model(self):
+        inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
+        x = tf.keras.layers.Flatten()(inp)
+        x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
+        for _ in range(self.n_layers):
+            x = tf.keras.layers.Dense(self.nunits, activation="relu")(x)
+        x = tf.keras.layers.Dense(self.msize * self.msize)(x)
+        x = tf.keras.layers.Reshape([self.msize, self.msize])(x)
+        model = tf.keras.models.Model(inp, x)
         model.compile(
             loss=floss,
             optimizer=optimizers.Adam(learning_rate=1e-4),
@@ -182,23 +138,18 @@ class NN:
         files = [x for x in p if x.is_file()]
         models = []
         for file_ in files:
-            print("Load %s" % (file_))
             models.append(load_model(str(file_), custom_objects={"floss": floss}))
         with open(f"{Path(model_path)}/config.toml", "r") as file:
             configs = toml.load(file)
-            config_mappings = {
-                "scaling_factor": "scaling_factor",
-                "range_min": "range_min",
-                "range_max": "range_max",
-            }
-            for config_key, attr_name in config_mappings.items():
+            for config_key, (attr_name, attr_type) in self.config_mappings.items():
                 if config_key in configs:
-                    setattr(self, attr_name, float(configs[config_key]))
+                    setattr(self, attr_name, attr_type(configs[config_key]))
         return models
 
     def train_single_model(
         self,
         model_id: int,
+        nmx_samples: int = 1000000,
         num_epochs: int = 5000,
         batch_size: int = 1024,
         mout_path: str = "./",
@@ -229,9 +180,10 @@ class NN:
         ]
 
         model = self.build_model()
+        # model = self.build_simple_model()
         for epoch in range(num_epochs):
             X, Y = generate_matrix_inversion_dataset(
-                1000000, self.msize, self.range_min, self.range_max
+                nmx_samples, self.msize, self.range_min, self.range_max
             )
             X_subset, X_val, Y_subset, Y_val = train_test_split(
                 X,
@@ -275,8 +227,9 @@ class NN:
 
     def train(
         self,
+        nmx_samples: int = 1000000,
         batch_size: int = 1024,
-        num_epochs: int = 5000,
+        num_epochs: int = 1000,
         n_repeats: int = 5,
         mout_path_: str = "./",
     ):
@@ -288,22 +241,34 @@ class NN:
         mout_path.mkdir()
 
         with open(f"{mout_path}/config.toml", "w") as file:
-            data = {"scaling_factor": self.scaling_factor}
-            data = {"range_min": self.range_min}
-            data = {"range_max": self.range_max}
+            data = {
+                "msize": self.msize,
+                "scaling_factor": self.scaling_factor,
+                "range_min": self.range_min,
+                "range_max": self.range_max,
+                "nunits": self.nunits,
+                "nlayers": self.n_layers,
+            }
+            # for config_key, (attr_name, _) in self.config_mappings.items():
+            #    data[config_key] = getattr(self, config_key)
             toml.dump(data, file)
 
+        from_id = len(self.models) + 1
         for model_id in range(n_repeats):
             self.train_single_model(
-                model_id=model_id + 1,
+                model_id=(model_id + from_id),
+                nmx_samples=nmx_samples,
                 num_epochs=num_epochs,
                 batch_size=batch_size,
                 mout_path=mout_path,
                 outname_suffix=strftime,
             )
 
+    def model_validator(
+        self, mout_path: str, nmx_sample: int = 1000000, plotout: str = None
+    ):
         X, Y = generate_matrix_inversion_dataset(
-            1000000, self.msize, self.range_min, self.range_max
+            nmx_sample, self.msize, self.range_min, self.range_max
         )
         models = self.load_models(mout_path)
         predictions = [[] for _ in range(len(Y))]
@@ -311,72 +276,13 @@ class NN:
             ytp = model.predict(X) * self.scaling_factor
             for i, yp in enumerate(ytp):
                 predictions[i].append(yp)
+        plot_exp_vs_pred(Y, np.arrat(predictions), plotout)
 
-        # Final output
-        ytrue = []
-        ypred = []
-        for i in range(len(predictions)):
-            # predictions[i] contains multiple prediction of the same things.
-            # So average by column
-            prow = np.array(predictions[i]).mean(axis=0)
-            for row in prow:
-                for number in row:
-                    ypred.append(number)
-            for row in Y[i]:
-                for number in row:
-                    ytrue.append(number)
-        ytrue = np.array(ytrue)
-        ypred = np.array(ypred)
-        print(
-            "R2: %.4f MSE: %.4f MAE: %.4f"
-            % (r2_score(ytrue, ypred), mse(ytrue, ypred), mae(ytrue, ypred))
+    def predict(self, mx: np.array) -> np.array:
+        """
+        Predict a single matrix
+        """
+        inv = np.array(
+            [model.predict(np.array([mx]), verbose=False)[0] for model in self.models]
         )
-        plt.scatter(ytrue, ypred, s=3)
-        plt.xlabel("Experimental inverted matrix values")
-        plt.ylabel("Predicted inverted matrix values")
-        plt.savefig("training_validation.png", dpi=300, bbox_inches="tight")
-
-    def predict(
-        self, inputmx: str, invertedmx: str = None, pred_inverse_out: str = None
-    ):
-        # Load input matrix to predicts
-        # Load models
-        X = read_dataset(inputmx)
-        inverse = []
-        for row in X:
-            inv = []
-            for model in self.models:
-                inv.append(model.predict(np.array([row]), verbose=False))
-            inv = np.array(inv)
-            inverse.append(inv.mean(axis=0)[0] * self.scaling_factor)
-        fo = open(pred_inverse_out, "w")
-        for inv in inverse:
-            for i in range(self.msize):
-                for j in range(self.msize - 1):
-                    fo.write("%.4f," % (inv[i][j]))
-                fo.write("%.4f\n" % (inv[i][-1]))
-            fo.write("END\n")
-        fo.close()
-
-        if invertedmx is not None:
-            Y = read_dataset(invertedmx)
-            # Calculate the prediction score!
-            ypred = []
-            ytrue = []
-            for i in range(len(inverse)):
-                for row in inverse[i]:
-                    for number in row:
-                        ypred.append(number)
-                for row in Y[i]:
-                    for number in row:
-                        ytrue.append(number)
-            ytrue = np.array(ytrue)
-            ypred = np.array(ypred)
-            print(
-                "R2: %.4f MSE: %.4f MAE: %.4f"
-                % (r2_score(ytrue, ypred), mse(ytrue, ypred), mae(ytrue, ypred))
-            )
-            plt.scatter(ytrue, ypred, s=3)
-            plt.xlabel("Experimental inverted matrix values")
-            plt.ylabel("External predicted inverted matrix values")
-            plt.show()
+        return inv.mean(axis=0) * self.scaling_factor
