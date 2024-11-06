@@ -85,7 +85,7 @@ Dependencies
 Installation
 ============
 
-To install the DeepMatrixInversion repository, you can choose between using poetry or pipx
+To install the DeepMatrixInversion repository, you can choose between using poetry, pip or pipx
 Below are the instructions for both methods.
 
 #### Poetry
@@ -112,7 +112,17 @@ poetry install
 
 This will set up your environment with all necessary packages to run DeepMatrixInversion.
 
-#### Using pipx
+#### pip
+
+Create a virtual environment and install deppmatrixinversion with pip
+
+```
+python3 -m venv .venv
+. .venv/bin/activate
+pip install git+https://github.com/gmrandazzo/DeepMatrixInversion.git
+```
+
+#### pipx
 
 If you prefer to use pipx, which allows you to install Python applications in isolated environments, follow these steps:
 
@@ -177,6 +187,10 @@ dmxtrain --msize <matrix_size> --rmin <min_value> --rmax <max_value> --epochs <n
 Once you have trained your model, you can use it to perform matrix inversion on new input matrices.
 The command for inference is dmxinvert, which takes an input matrix and outputs its inverse.
 
+WARNING: dmxinvert can invert a matrix bigger than the one used to train the model through the Sherman-Morrison-Woodbury matrix block inversion formula.
+This feature works only with matrices whose block size can be divided by the model training block size without reminder. 
+The feature is highly experimental and may need to be revised.
+
 ```
 dmxinvert --inputmx <input_matrix_file> --inverseout <output_csv_file> --model <model_path>
 ```
@@ -192,6 +206,38 @@ dmxinvert --inputmx input_matrix.csv --inverseout output_inverse.csv --model ./M
     --inputmx <input_matrix_file>: Specifies the path to the input matrix file that you want to invert. This file should contain a valid matrix format (e.g., CSV).
     --inverseout <output_csv_file>: Indicates where to save the resulting inverted matrix. The output will be saved in CSV format.
     --model <model_path>: Provides the path to the trained model that will be used for performing the inversion.
+```
+
+
+Generating an artificial dataset with input matrix and output inverted is done trought dmx dmxdatasetgenerator
+
+### Example
+
+```
+dmxdatasetgenerator 3 10 -1 1 test_3x3_range_-1+1
+```
+
+This will generate 10 matrices of size 3x3 with numbers in a range from -1 to +1.
+
+#### Parameters
+```
+    dmxdatasetgenerator [matrix size] [number of samples] [range min] [range max] [outname_prefix]
+```
+
+
+Then the dataset can be validated using dmxdatasetverify
+
+### Example
+
+```
+dmxdatasetverify  test_3x3_range_-1+1_matrices_3x3.mx test_3x3_range_-1+1_matrices_inverted_3x3.mx invertible
+Dataset valid.
+```
+
+#### Parameters
+
+```
+dmxdatasetverify [dataset matrix to invert] [dataset matrix inverted] [type: invertible or singular]
 ```
 
 
