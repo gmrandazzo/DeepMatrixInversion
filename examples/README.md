@@ -114,25 +114,34 @@ The script benchmarks matrices of size $N \times N$, where $N$ increases as mult
 python3 benchmark_inversion.py --model ../Model_3x3_YYYYMMDDHHMMSS --max_k 10 --plotout benchmark_results.png
 ```
 
-### Performance Benchmark (Mac M2 Pro)
+### Performance Benchmark Comparison
 
-The following benchmark was performed on a **Mac M2 Pro**, comparing the optimized Neural Network (Recursive) method against NumPy's LAPACK-based inversion. 
+The following benchmarks compare the optimized Neural Network (Recursive) method against NumPy's LAPACK-based inversion on different hardware.
 
+#### Mac M2 Pro
 *Note: After graph optimization and ensemble fusion, the 150x150 inversion time improved from ~2.7s to ~0.23s.*
 
 | Size (N x N) | NumPy (s) | NN (s) |
 | :--- | :---: | :---: |
 | **3x3** | 0.00186 | 0.09893 |
-| **6x6** | 0.00003 | 0.00649 |
-| **15x15** | 0.00392 | 0.04744 |
 | **30x30** | 0.00334 | 0.09050 |
-| **45x45** | 0.00190 | 0.10393 |
 | **60x60** | 0.00198 | 0.12132 |
-| **75x75** | 0.00214 | 0.13998 |
 | **90x90** | 0.00436 | 0.16692 |
-| **105x105** | 0.00849 | 0.17924 |
 | **120x120** | 0.00327 | 0.20806 |
-| **135x135** | 0.00242 | 0.21255 |
 | **150x150** | 0.01255 | 0.23395 |
 
-![Benchmark Performance](benchmark_results.png)
+![Benchmark Mac M2 Pro](benchmark_results_mac_m2_pro.png)
+
+#### NVIDIA RTX 3070 (CUDA)
+*Note: GPU acceleration significantly reduces the overhead of the recursive steps.*
+
+| Size (N x N) | NumPy (s) | NN (s) |
+| :--- | :---: | :---: |
+| **3x3** | 0.00008 | 0.14070 |
+| **30x30** | 0.00010 | 0.04279 |
+| **60x60** | 0.00012 | 0.07778 |
+| **90x90** | 0.00021 | 0.11718 |
+| **120x120** | 0.00031 | 0.15650 |
+| **150x150** | 0.00142 | 0.19471 |
+
+![Benchmark RTX 3070](benchmark_results_RTX3070.png)
