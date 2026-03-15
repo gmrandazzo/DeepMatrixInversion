@@ -101,10 +101,10 @@ git clone https://github.com/gmrandazzo/DeepMatrixInversion.git
 cd DeepMatrixInversion
 ```
 
-3. Install Dependencies: Use Poetry to install the required dependencies for the project.
+3. Install Dependencies: Use Poetry to install the required dependencies for the project. **Note: Python 3.11 is recommended for best compatibility with TensorFlow and h5py dependencies.**
 
-```
-python3 -m venv .venv
+```bash
+python3.11 -m venv .venv
 . .venv/bin/activate
 pip install poetry
 poetry install
@@ -116,8 +116,8 @@ This will set up your environment with all necessary packages to run DeepMatrixI
 
 Create a virtual environment and install deppmatrixinversion with pip
 
-```
-python3 -m venv .venv
+```bash
+python3.11 -m venv .venv
 . .venv/bin/activate
 pip install git+https://github.com/gmrandazzo/DeepMatrixInversion.git
 ```
@@ -155,6 +155,32 @@ sudo  dnf install pipx
 pipx install git+https://github.com/gmrandazzo/DeepMatrixInversion.git
 
 
+Testing
+=======
+
+To run the unit tests, ensure you have the dependencies installed and run:
+
+```bash
+./.venv/bin/pytest tests/
+```
+
+Batch Processing (run.x)
+========================
+
+The repository includes an automation script, `jobs/run.x`, designed to streamline the training and evaluation workflow. This script is particularly useful for:
+
+1.  **Automated Training:** It runs `dmxtrain` with a predefined ensemble size (3 models by default).
+2.  **Model Identification:** It automatically identifies the most recently created timestamped model directory.
+3.  **Cross-Validation:** It performs inference on multiple datasets (validation, interpolation, and extrapolation sets) to assess model robustness.
+4.  **Singular Matrix Demonstration:** It runs a prediction on singular matrices, highlighting the neural network's behavior when encountering non-invertible inputs.
+
+To execute the batch script:
+
+```bash
+cd jobs
+bash run.x
+```
+
 Usage
 =====
 
@@ -173,23 +199,83 @@ dmxtrain --msize <matrix_size> --rmin <min_value> --rmax <max_value> --epochs <n
  dmxtrain --msize --rmin -1 --rmax 1 --epochs 5000 --batch_size 1024 --n_repeats 3 --mout ./Model_3x3
 ```
 
-#### Prameters
+#### Parameters
 ```
     --msize <matrix_size>: Specifies the size of the square matrices to be generated for training. For example, 3 for 3x3 matrices.
+    --nmx_samples <number>: Total number of samples to generate for the dataset (default 1,000,000).
     --rmin <min_value>: Sets the minimum value for the random elements in the matrices. For instance, -1 will allow negative values.
     --rmax <max_value>: Sets the maximum value for the random elements in the matrices. For example, 1 will limit values to a maximum of 1.
-    --epochs <number_of_epochs>: Defines how many epochs (complete passes through the training dataset) to run during training. A higher number typically leads to better performance; in this case, 5000.
+    --epochs <number_of_epochs>: Defines how many epochs (complete passes through the training dataset) to run during training.
     --batch_size <size_of_batches>: Determines how many samples are processed before the model is updated. A batch size of 1024 means that 1024 samples are used in each iteration.
-    --n_repeats <number_of_repeats>: Indicates how many times to repeat the training process with different random seeds or initializations. This can help ensure robustness; for instance, repeating 3 times.
-    --mout <output_model_path>: Specifies where to save the trained model. In this example, it saves to ./Model_3x3.
+    --n_repeats <number_of_repeats>: Indicates how many models to train for the ensemble. This helps ensure robustness and improved accuracy through averaging.
+    --mout <output_model_path>: Specifies the prefix for the timestamped directory where the trained models and configuration will be saved.
 ```
 
 Once you have trained your model, you can use it to perform matrix inversion on new input matrices.
 The command for inference is dmxinvert, which takes an input matrix and outputs its inverse.
 
-WARNING: dmxinvert can invert a matrix bigger than the one used to train the model through the Sherman-Morrison-Woodbury matrix block inversion formula.
-This feature works only with matrices whose block size can be divided by the model training block size without reminder. 
-The feature is highly experimental and may need to be revised.
+### Recursive Block Inversion (Schur Complement)
+
+A powerful feature of DeepMatrixInversion is its ability to invert matrices much larger than the ones used during training. This is achieved through a **recursive block inversion formula** based on the Schur complement.
+
+#### How it works:
+If you have a large matrix $P$ of size $N \times N$, and a neural network trained to invert matrices of size $m \times m$ (where $N$ is a multiple of $m$), $P$ can be partitioned as:
+
+$$
+P = \begin{pmatrix} A & B \\ C & D \end{pmatrix}
+$$
+
+Where:
+- $A$ is an $m \times m$ block (which the neural network can invert directly).
+- $B$ is $m \times (N-m)$.
+- $C$ is $(N-m) \times m$.
+- $D$ is $(N-m) \times (N-m)$.
+
+The inverse $P^{-1}$ is then calculated as:
+
+$$
+P^{-1} = \begin{pmatrix} A^{-1} + A^{-1}BS^{-1}CA^{-1} & -A^{-1}BS^{-1} \\ -S^{-1}CA^{-1} & S^{-1} \end{pmatrix}
+$$
+
+Where $S = D - CA^{-1}B$ is the **Schur complement** of $A$ in $P$.
+
+#### Recursive Capability:
+Since $S$ is of size $(N-m) \times (N-m)$, the algorithm applies the same logic recursively until it reaches the base case ($m \times m$), which is handled by the neural network.
+
+**Example:** A model trained on **3x3** matrices can invert a **9x9** matrix by:
+1. Splitting the 9x9 into a 3x3 ($A$) and a 6x6 ($D$).
+2. Inverting $A$ using the Neural Network.
+3. Calculating the 6x6 Schur complement $S$.
+4. Recursively inverting the 6x6 $S$ by splitting it into a 3x3 and a 3x3.
+
+#### Practical Limitations:
+While theoretically this allows for inverting matrices of any size ($N = k \cdot m$), in practice, the **maximum size** is limited by the **accumulation of approximation errors**. Since the neural network provides an approximate inverse, each recursive step and matrix multiplication compounds this error. For very large matrices, the resulting "inverse" may deviate significantly from the mathematical truth.
+
+WARNING: This feature is experimental and works best when the input matrix size is an exact multiple of the model training size (`msize`).
+
+Example Application: Multiple Linear Regression
+===============================================
+
+A practical application of matrix inversion is solving the **Ordinary Least Squares (OLS)** problem in Multiple Linear Regression (MLR). Given a system $(X^T X) \beta = X^T Y$, we find the coefficients $\beta$ as:
+
+$$
+\beta = (X^T X)^{-1} X^T Y
+$$
+
+In the `examples/mlr_box_draper.py` script, we apply this to a real-world chemical system dataset (Box & Draper, 11.3). The problem involves:
+1.  **Feature Expansion:** Expanding 3 base variables into a 10-parameter second-order polynomial model.
+2.  **Coded Variables:** Scaling inputs to $[-1, 1]$ to ensure the $X^T X$ matrix is well-conditioned for the neural network.
+3.  **Recursive Inversion with Padding:** Since the normal equation matrix $X^T X$ is **10x10**, and our model is trained on **3x3** blocks, the script automatically pads the matrix to **12x12** (using identity padding) to allow for recursive Schur complement inversion.
+
+To run the example:
+
+```bash
+# First, train a 3x3 model ensemble
+dmxtrain --msize 3 --epochs 5000 --mout ./Model_3x3
+
+# Run the MLR comparison (replace path with your actual model folder)
+python3 examples/mlr_box_draper.py --mode nn --model ./Model_3x3_YYYYMMDDHHMMSS
+```
 
 ```
 dmxinvert --inputmx <input_matrix_file> --inverseout <output_csv_file> --model <model_path>

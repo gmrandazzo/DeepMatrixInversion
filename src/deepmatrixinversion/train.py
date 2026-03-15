@@ -50,7 +50,7 @@ def main():
     else:
         nn = NN(args.msize, args.rmin, args.rmax)
         nn.verbose = 1
-        nn.train(
+        mout_path = nn.train(
             args.nmx_samples,
             args.batch_size,
             args.epochs,
@@ -59,7 +59,7 @@ def main():
         )
 
         nn.model_validator(
-            mout_path=args.mout, nmx_sample=args.nmx_sample, plotout=args.plotout
+            mout_path=mout_path, nmx_sample=args.nmx_samples, plotout=args.plotout
         )
 
 

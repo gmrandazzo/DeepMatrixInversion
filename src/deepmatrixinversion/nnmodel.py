@@ -80,9 +80,18 @@ class NN:
         if models_path:
             self.models = self.load_models(models_path)
 
-    def get_scaling_factor(
-        self,
-    ):
+    def get_scaling_factor(self):
+        """
+        Calculate scaling factor based on the defined range.
+        If range_max/min are not set, fallback to data-driven scaling.
+        """
+        if hasattr(self, "range_max") and hasattr(self, "range_min"):
+            if self.range_max is not None and self.range_min is not None:
+                return float(self.range_max - self.range_min)
+
+        if not hasattr(self, "X") or self.X is None or len(self.X) == 0:
+            return 1.0  # Default fallback
+
         global_min = global_max = self.X[0].flatten()[0]
         for x in self.X:
             flat_matrix = x.flatten()
@@ -215,11 +224,11 @@ class NN:
                 tf.summary.scalar("epoch_mae", history.history["mae"][0], step=epoch)
                 if (epoch + 1) % 100 == 0:
                     model_ = load_model(model_output, custom_objects={"floss": floss})
-                    Y_test_pred = model_.predict(X_test) * self.scaling_factor
+                    Y_test_pred = model_.predict(X_test, verbose=0) * self.scaling_factor
                     mse = tf.reduce_mean(tf.square(Y_test - Y_test_pred))
                     del model_
                     print(
-                        f"Epoch {epoch + 1}/num_epochs, Loss: {history.history['loss'][0]:.4f}, "
+                        f"Epoch {epoch + 1}/{num_epochs}, Loss: {history.history['loss'][0]:.4f}, "
                         f"MSE: {history.history['mse'][0]:.4f}, MAE: {history.history['mae'][0]:.4f} "
                         f"Current MSE in testing: {mse}"
                     )
@@ -256,6 +265,7 @@ class NN:
                 mout_path=mout_path,
                 outname_suffix=strftime,
             )
+        return str(mout_path)
 
     def model_validator(
         self, mout_path: str, nmx_sample: int = 1000000, plotout: str = None
@@ -269,7 +279,7 @@ class NN:
             ytp = model.predict(X) * self.scaling_factor
             for i, yp in enumerate(ytp):
                 predictions[i].append(yp)
-        plot_exp_vs_pred(Y, np.arrat(predictions), plotout)
+        plot_exp_vs_pred(Y, np.array(predictions), plotout)
 
     def predict(self, mx: np.array) -> np.array:
         """

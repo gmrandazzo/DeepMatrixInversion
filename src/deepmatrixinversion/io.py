@@ -24,11 +24,16 @@ def read_dataset(fmx):
     with open(fmx, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
+            if not line:
+                continue
             if "END" in line:
-                mxs.append(mx.copy())
-                del mx[:]
+                if mx:
+                    mxs.append(mx.copy())
+                    del mx[:]
             else:
                 mx.append(str.split(line, ","))
+        if mx:
+            mxs.append(mx.copy())
     return np.array(mxs).astype(float)
 
 

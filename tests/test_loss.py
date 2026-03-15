@@ -68,3 +68,8 @@ def test_floss():
     y_pred = np.array(y_pred)
     assert np.fabs(numpy_loss_example(y_true, y_pred) - 0.20402847) < 1e-4
     assert np.fabs(tf_loss_example(y_true, y_pred) - 0.20402847) < 1e-4
+
+
+if __name__ == "__main__":
+    test_floss()
+    print("Test passed!")
