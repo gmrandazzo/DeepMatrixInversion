@@ -77,8 +77,29 @@ class NN:
             "range_max": ["range_max", float],
         }
         self.models = []
+        self._ensemble_graph = None
         if models_path:
             self.models = self.load_models(models_path)
+            self._prepare_ensemble_graph()
+
+    def _prepare_ensemble_graph(self):
+        """
+        Fuses the ensemble into a single optimized TensorFlow graph.
+        """
+        if not self.models:
+            return
+        
+        # Create a single input
+        inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
+        # Get predictions from all models
+        # Note: We use model(inp) which is faster than model.predict for small inputs
+        outs = [model(inp, training=False) for model in self.models]
+        # Average the results in the graph
+        avg = tf.keras.layers.Average()(outs)
+        
+        ensemble_model = tf.keras.Model(inp, avg)
+        # Wrap in tf.function for graph optimization and XLA speedup if possible
+        self._ensemble_graph = tf.function(ensemble_model, reduce_retracing=True)
 
     def get_scaling_factor(self):
         """
@@ -283,9 +304,17 @@ class NN:
 
     def predict(self, mx: np.array) -> np.array:
         """
-        Predict a single matrix
+        Predict a single matrix using the optimized ensemble graph.
         """
+        if self._ensemble_graph:
+            # Convert to tensor and add batch dimension
+            mx_tensor = tf.convert_to_tensor(mx[np.newaxis, ...], dtype=tf.float32)
+            # Run the fused graph
+            inv = self._ensemble_graph(mx_tensor)
+            return inv.numpy()[0] * self.scaling_factor
+
+        # Fallback if graph isn't prepared
         inv = np.array(
-            [model.predict(np.array([mx]), verbose=False)[0] for model in self.models]
+            [model(mx[np.newaxis, ...], training=False)[0] for model in self.models]
         )
         return inv.mean(axis=0) * self.scaling_factor

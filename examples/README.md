@@ -9,8 +9,15 @@ $y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \epsilon$
 
 Since the resulting Normal Equation matrix ($X^T X$) is exactly **3x3**, it is inverted directly by the neural network without requiring Schur complement recursion or padding.
 
-![Simple OLS Comparison](simple_ols_plot.png)
+![Simple OLS Comparison](simple_ols.png)
 *(Note: Run the script with --plotout to generate this image locally)*
+
+### Coefficient Comparison:
+| Term | NumPy | NN | Diff |
+| :--- | :---: | :---: | :---: |
+| **Intercept** | 4.9732 | 4.9970 | 2.38e-02 |
+| **b1 (x1)** | 1.6677 | 1.6982 | 3.06e-02 |
+| **b2 (x2)** | -3.0420 | -3.0340 | 7.97e-03 |
 
 ### How to Run:
 ```bash
@@ -71,7 +78,23 @@ Since our base neural network model is trained on **3x3** matrices, we cannot in
 
 ## Results Visualization
 
-The script generates a comparison between the "exact" coefficients (NumPy) and the neural network's approximation.
+The script generates a comparison between the "exact" coefficients (NumPy) and the neural network's approximation. 
+
+### Comparison of Beta Coefficients:
+| Term | NumPy | NN | Diff |
+| :--- | :---: | :---: | :---: |
+| **b0** | 58.5587 | 57.7121 | 8.4655e-01 |
+| **b1** | 2.6229 | 2.1123 | 5.1062e-01 |
+| **b2** | 3.4881 | 0.3515 | 3.1366e+00 |
+| **b3** | 4.8791 | -3.1589 | 8.0380e+00 |
+| **b12** | -6.9231 | -13.2173 | 6.2942e+00 |
+| **b13** | -8.6988 | 0.9694 | 9.6682e+00 |
+| **b23** | -15.1579 | -12.6345 | 2.5234e+00 |
+| **b11** | -3.8133 | -3.1012 | 7.1215e-01 |
+| **b22** | -5.3824 | -0.5475 | 4.8349e+00 |
+| **b33** | -7.5047 | -5.6599 | 1.8448e+00 |
+
+**Mean Absolute Difference:** 3.8409e+00
 
 ![Beta Coefficients Comparison](comparison_plot.png)
 *(Note: Run the script with --plotout to generate this image locally)*
@@ -91,5 +114,25 @@ The script benchmarks matrices of size $N \times N$, where $N$ increases as mult
 python3 benchmark_inversion.py --model ../Model_3x3_YYYYMMDDHHMMSS --max_k 10 --plotout benchmark_results.png
 ```
 
+### Performance Benchmark (Mac M2 Pro)
+
+The following benchmark was performed on a **Mac M2 Pro**, comparing the optimized Neural Network (Recursive) method against NumPy's LAPACK-based inversion. 
+
+*Note: After graph optimization and ensemble fusion, the 150x150 inversion time improved from ~2.7s to ~0.23s.*
+
+| Size (N x N) | NumPy (s) | NN (s) |
+| :--- | :---: | :---: |
+| **3x3** | 0.00186 | 0.09893 |
+| **6x6** | 0.00003 | 0.00649 |
+| **15x15** | 0.00392 | 0.04744 |
+| **30x30** | 0.00334 | 0.09050 |
+| **45x45** | 0.00190 | 0.10393 |
+| **60x60** | 0.00198 | 0.12132 |
+| **75x75** | 0.00214 | 0.13998 |
+| **90x90** | 0.00436 | 0.16692 |
+| **105x105** | 0.00849 | 0.17924 |
+| **120x120** | 0.00327 | 0.20806 |
+| **135x135** | 0.00242 | 0.21255 |
+| **150x150** | 0.01255 | 0.23395 |
+
 ![Benchmark Performance](benchmark_results.png)
-*(Note: Run the script to generate this plot. Given that the NN approach is recursive and implemented in high-level Python, NumPy will typically be faster for standard sizes. This benchmark demonstrates the computational scaling of the recursive approach.)*
