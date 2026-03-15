@@ -283,11 +283,19 @@ dmxinvert --inputmx <input_matrix_file> --inverseout <output_csv_file> --model <
 
 ### Example:
 
+```bash
+dmxinvert --inputmx input_matrix.csv --inverseout output_inverse.csv --model ./Model_3x3_20240920182800
 ```
-dmxinvert --inputmx input_matrix.csv --inverseout output_inverse.csv --model ./Model_3x3_*
+
+#### Automatic Model Hub Downloading (Hugging Face)
+If you provide a model path in the format `user/repo_name` (e.g., `gmrandazzo/deepmatrixinversion-3x3`), the tool will automatically check the **Hugging Face Hub**, download the pretrained ensemble to your local cache, and use it for inference.
+
+```bash
+dmxinvert --inputmx input.csv --model gmrandazzo/dmx-resnet-3x3-v1 --inverseout inv.csv
 ```
 
 #### Parameters
+
 ```
     --inputmx <input_matrix_file>: Specifies the path to the input matrix file that you want to invert. This file should contain a valid matrix format (e.g., CSV).
     --inverseout <output_csv_file>: Indicates where to save the resulting inverted matrix. The output will be saved in CSV format.

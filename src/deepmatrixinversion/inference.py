@@ -10,11 +10,20 @@ go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 """
 
 import numpy as np
+import os
+from pathlib import Path
 from deepmatrixinversion.nnmodel import NN
+from deepmatrixinversion.hub import download_model_from_hub
 
 class MatrixInversionInference:
     def __init__(self, models_path: str, invert_mode="nn"):
-        self.nn = NN(models_path=models_path)
+        actual_path = models_path
+        if models_path and not os.path.isdir(models_path):
+            # Check if it looks like a Hugging Face repo (contains '/')
+            if "/" in models_path:
+                actual_path = download_model_from_hub(models_path)
+        
+        self.nn = NN(models_path=actual_path)
         self.invert_mode = invert_mode
 
     def _get_base_inv(self, mx: np.array):
