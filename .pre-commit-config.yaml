@@ -1,22 +1,17 @@
 repos:
-  - repo: https://github.com/hhatto/autopep8
-    rev: v2.3.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.7
     hooks:
-      - id: autopep8
-        args: [--in-place]
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
 
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
     hooks:
-      - id: black
-        language_version: python3
-
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
-    hooks:
-      - id: flake8
-        args: ["--config=.flake8"]
-        additional_dependencies: [flake8-isort]
+      - id: mypy
+        additional_dependencies: [types-toml]
+        args: ["--ignore-missing-imports", "src"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -36,21 +31,3 @@ repos:
       - id: check-ast
       - id: check-toml
       - id: check-xml
-
-  #- repo: https://github.com/pycqa/pylint
-  #  rev: v3.2.7
-  #  hooks:
-  #    - id: pylint
-  #      args: [--max-line-length=79]
-
-  - repo: https://github.com/asottile/yesqa
-    rev: v1.5.0
-    hooks:
-      - id: yesqa
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        additional_dependencies: [toml]
-        args: ["--profile", "black"]

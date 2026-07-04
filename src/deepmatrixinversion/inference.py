@@ -9,11 +9,14 @@ go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 
 """
 
-import numpy as np
 import os
-from pathlib import Path
-from deepmatrixinversion.nnmodel import NN
+from typing import cast
+
+import numpy as np
+
 from deepmatrixinversion.hub import download_model_from_hub
+from deepmatrixinversion.nnmodel import NN
+
 
 class MatrixInversionInference:
     def __init__(self, models_path: str, invert_mode="nn"):
@@ -22,19 +25,19 @@ class MatrixInversionInference:
             # Check if it looks like a Hugging Face repo (contains '/')
             if "/" in models_path:
                 actual_path = download_model_from_hub(models_path)
-        
+
         self.nn = NN(models_path=actual_path)
         self.invert_mode = invert_mode
 
-    def _get_base_inv(self, mx: np.array):
+    def _get_base_inv(self, mx: np.ndarray) -> np.ndarray:
         if self.invert_mode == "nn":
-            return self.nn.predict(mx)
+            return np.asarray(self.nn.predict(mx))
         else:
-            return np.linalg.inv(mx)
+            return np.asarray(np.linalg.inv(mx))
 
-    def split_matrix(self, mx: np.array):
+    def split_matrix(self, mx: np.ndarray):
         """
-        Split matrix into blocks. 
+        Split matrix into blocks.
         A is msize x msize, B is msize x (N-msize),
         C is (N-msize) x msize, D is (N-msize) x (N-msize)
         """
@@ -47,11 +50,11 @@ class MatrixInversionInference:
 
     def block_matrix_inverse(
         self,
-        A: np.array,
-        B: np.array,
-        C: np.array,
-        D: np.array,
-    ) -> np.array:
+        A: np.ndarray,
+        B: np.ndarray,
+        C: np.ndarray,
+        D: np.ndarray,
+    ) -> np.ndarray:
         """
         Sherman-Morrison-Woodbury matrix block inversion formula
         (Block Matrix Inversion using Schur Complement)
@@ -68,50 +71,45 @@ class MatrixInversionInference:
         # Construct the inverse of the block matrix
         # P^(-1) = [ A^(-1) + A^(-1) * B * S^(-1) * C * A^(-1),  -A^(-1) * B * S^(-1) ]
         #          [ -S^(-1) * C * A^(-1),                       S^(-1)            ]
-        
+
         top_left = A_inv + A_inv @ B @ S_inv @ C @ A_inv
         top_right = -A_inv @ B @ S_inv
         bottom_left = -S_inv @ C @ A_inv
         bottom_right = S_inv
 
-        P_inv = np.block([
-            [top_left, top_right],
-            [bottom_left, bottom_right]
-        ])
+        P_inv = np.block([[top_left, top_right], [bottom_left, bottom_right]])
         return P_inv
 
-    def _invert_single(self, mx: np.array) -> np.array:
+    def _invert_single(self, mx: np.ndarray) -> np.ndarray:
         """
         Recursively invert a single matrix using block inversion.
         Includes automatic scaling to fit the model's training range.
         """
         size = mx.shape[0]
-        
+
         # Base case: Matrix matches model size
         if size == self.nn.msize:
             # Scale input to model's expected range (usually -1 to 1)
             # We use max absolute value to keep it centered if possible
             expected_max = max(abs(self.nn.range_min), abs(self.nn.range_max))
             current_max = np.max(np.abs(mx))
-            
+
             if current_max > expected_max:
                 k = current_max / expected_max
                 # If A' = A/k, then (A')^-1 = k * A^-1
                 # nn.predict returns A'^-1, so we divide by k to get A^-1
                 scaled_mx = mx / k
-                return self._get_base_inv(scaled_mx) / k
+                return cast(np.ndarray, self._get_base_inv(scaled_mx) / k)
             else:
-                return self._get_base_inv(mx)
-        
+                return cast(np.ndarray, self._get_base_inv(mx))
+
         if size < self.nn.msize or size % self.nn.msize != 0:
-            raise ValueError(
-                "The model is not suited to predict the input matrix."
-            )
-        
+            raise ValueError("The model is not suited to predict the input matrix.")
+
         A, B, C, D = self.split_matrix(mx)
         return self.block_matrix_inverse(A, B, C, D)
 
-    def invert(self, mxlst: list) -> np.array:
+    def invert(self, mxlst: list) -> np.ndarray:
         """
         Invert a list of matrices
         """

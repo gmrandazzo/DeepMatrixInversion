@@ -21,7 +21,7 @@ def read_dataset(fmx):
     """
     mxs = []
     mx = []
-    with open(fmx, "r", encoding="utf-8") as f:
+    with open(fmx, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -37,7 +37,7 @@ def read_dataset(fmx):
     return np.array(mxs).astype(float)
 
 
-def write_dataset(X: np.array, out: str):
+def write_dataset(X: np.ndarray, out: str):
     """
     Write a dataset
     """
@@ -50,7 +50,7 @@ def write_dataset(X: np.array, out: str):
 
 
 def write_train_test_validation_sets(
-    X: np.array, Y: np.array, matrix_size: str, suffix: str
+    X: np.ndarray, Y: np.ndarray, matrix_size: str, suffix: str
 ):
     """
     Take a dataset of matrix and write in this format

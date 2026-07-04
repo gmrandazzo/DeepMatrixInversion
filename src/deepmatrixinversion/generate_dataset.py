@@ -10,6 +10,7 @@ please read the file "LICENSE" or
 go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 
 """
+
 import sys
 
 from deepmatrixinversion.dataset import (

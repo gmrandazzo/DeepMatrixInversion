@@ -9,6 +9,8 @@ go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 
 """
 
+from typing import Any
+
 import numpy as np
 
 
@@ -46,15 +48,15 @@ def generate_matrix_inversion_dataset(
     matrix_size: int,
     min_val: float = -1.0,
     max_val: float = 1.0,
-    nn_inv_fnc: any = None,
+    nn_inv_fnc: Any = None,
 ):
     """
     Generate a matrix inversion dataset.
     This function use numpy default to generate small dataset and can use a
     neural network inverse model function (nn_inv_fnc) to do so.
     """
-    X = []
-    Y = []
+    X: list = []
+    Y: list = []
     while len(X) < num_samples:
         matrices = (
             np.random.random(((num_samples - len(X)), matrix_size, matrix_size))
@@ -75,7 +77,7 @@ def generate_matrix_inversion_dataset(
     return np.array(X), np.array(Y)
 
 
-def verify_matrix_inversion(X: np.array, Y: np.array) -> bool:
+def verify_matrix_inversion(X: np.ndarray, Y: np.ndarray) -> bool:
     for i, x in enumerate(X):
         matrix_size = x.shape[0]
         product = np.dot(x, Y[i])
@@ -88,7 +90,7 @@ def verify_matrix_inversion(X: np.array, Y: np.array) -> bool:
     return True
 
 
-def verify_pseudo_inversion(X: np.array, Y: np.array) -> bool:
+def verify_pseudo_inversion(X: np.ndarray, Y: np.ndarray) -> bool:
     for i, x in enumerate(X):
         if np.allclose(Y[i], np.dot(Y[i], np.dot(x, Y[i]))) is False:
             print(f"Problem with matrix\n{x}")

@@ -1,6 +1,8 @@
 # Directory
 build/
 build/*
+dist/
+dist/*
 .tox/*
 .kdev4
 .vscode

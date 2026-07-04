@@ -1,0 +1,117 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - develop
+  pull_request:
+    branches:
+      - master
+      - main
+      - develop
+
+jobs:
+  lint-and-test:
+    name: Lint, type-check and test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install project and dev dependencies
+        run: |
+          poetry install --with dev
+
+      - name: Check formatting with ruff
+        run: poetry run ruff format --check src tests
+
+      - name: Lint with ruff
+        run: poetry run ruff check src tests
+
+      - name: Type-check with mypy
+        run: poetry run mypy src
+
+      - name: Run tests
+        run: poetry run pytest tests/ -v --cov=deepmatrixinversion --cov-report=xml
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 7
+
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Build wheel and sdist
+        run: poetry build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  publish-pypi:
+    name: Publish to PyPI via twine
+    runs-on: ubuntu-latest
+    needs: build
+    # Publish only when a PR from develop is merged into master/main.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event.head_commit.message != ''
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Publish to PyPI using twine.
+      # Configure the following repository secrets:
+      #   PYPI_API_TOKEN  -> Your PyPI API token
+      - name: Publish to PyPI with twine
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install --upgrade twine
+          twine upload dist/*

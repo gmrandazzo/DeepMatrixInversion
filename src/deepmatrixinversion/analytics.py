@@ -10,6 +10,7 @@ please read the file "LICENSE" or
 go to "http://www.gnu.org/licenses/gpl-3.0.en.html"
 
 """
+
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LinearRegression
@@ -17,7 +18,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
 def plot_exp_vs_pred(
-    inverselst_true: list, inverselst_pred: list, save_path: str = None
+    inverselst_true: list | np.ndarray,
+    inverselst_pred: list | np.ndarray,
+    save_path: str = None,
 ):
     """
     Plot experimental vs predicted inverted matrix values and calculate metrics.
@@ -82,7 +85,7 @@ def plot_exp_vs_pred(
 
     # Add text box with metrics
     textstr = f"R² = {r2:.4f}\nMSE = {mse:.4f}\nMAE = {mae:.4f}"
-    props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
+    props = {"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5}
     plt.text(
         0.05,
         0.95,
@@ -109,10 +112,12 @@ def plot_diff(inverselst_true: list, inverselst_pred: list, save_path: str = Non
     )
     if len(inverselst_true) == 1:
         axes = [axes]
-    for i, (true, pred) in enumerate(zip(inverselst_true, inverselst_pred)):
+    for i, (true, pred) in enumerate(
+        zip(inverselst_true, inverselst_pred, strict=True)
+    ):
         diff = true - pred
         im = axes[i].imshow(diff, cmap="RdYlGn")
-        axes[i].set_title(f"Matrix {i+1}")
+        axes[i].set_title(f"Matrix {i + 1}")
         for (j, k), value in np.ndenumerate(diff):
             axes[i].text(k, j, f"{value:.2f}", ha="center", va="center")
         fig.colorbar(im, ax=axes[i])

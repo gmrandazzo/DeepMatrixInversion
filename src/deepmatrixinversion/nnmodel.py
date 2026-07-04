@@ -68,13 +68,13 @@ class NN:
         self.nlayers = nlayers
         self.scaling_factor = range_max - range_min
         self.verbose = 1
-        self.config_mappings = {
-            "scaling_factor": ["scaling_factor", float],
-            "msize": ["msize", int],
-            "nunits": ["nunits", int],
-            "nlayers": ["nlayers", int],
-            "range_min": ["range_min", float],
-            "range_max": ["range_max", float],
+        self.config_mappings: dict[str, tuple[str, type]] = {
+            "scaling_factor": ("scaling_factor", float),
+            "msize": ("msize", int),
+            "nunits": ("nunits", int),
+            "nlayers": ("nlayers", int),
+            "range_min": ("range_min", float),
+            "range_max": ("range_max", float),
         }
         self.models = []
         self._ensemble_graph = None
@@ -88,7 +88,7 @@ class NN:
         """
         if not self.models:
             return
-        
+
         # Create a single input
         inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
         # Get predictions from all models
@@ -96,7 +96,7 @@ class NN:
         outs = [model(inp, training=False) for model in self.models]
         # Average the results in the graph
         avg = tf.keras.layers.Average()(outs)
-        
+
         ensemble_model = tf.keras.Model(inp, avg)
         # Wrap in tf.function for graph optimization and XLA speedup if possible
         self._ensemble_graph = tf.function(ensemble_model, reduce_retracing=True)
@@ -172,7 +172,7 @@ class NN:
         models = []
         for file_ in files:
             models.append(load_model(str(file_), custom_objects={"floss": floss}))
-        with open(f"{Path(model_path)}/config.toml", "r") as file:
+        with open(f"{Path(model_path)}/config.toml") as file:
             configs = toml.load(file)
             for config_key, (attr_name, attr_type) in self.config_mappings.items():
                 if config_key in configs:
@@ -188,14 +188,10 @@ class NN:
         mout_path: str = "./",
         outname_suffix: str = "",
     ):
-        logfile = "./logs/#b%d_#e%d_#mid_%d_" % (
-            batch_size,
-            num_epochs,
-            model_id,
-        )
+        logfile = f"./logs/#b{batch_size}_#e{num_epochs}_#mid_{model_id}_"
         logfile += outname_suffix
 
-        model_output = "%s/%d.keras" % (str(Path(mout_path).absolute()), model_id)
+        model_output = f"{Path(mout_path).absolute()}/{model_id}.keras"
         """
         TensorBoard(
                 log_dir=logfile,
@@ -248,7 +244,9 @@ class NN:
                 tf.summary.scalar("epoch_mae", history.history["mae"][0], step=epoch)
                 if (epoch + 1) % 100 == 0:
                     model_ = load_model(model_output, custom_objects={"floss": floss})
-                    Y_test_pred = model_.predict(X_test, verbose=0) * self.scaling_factor
+                    Y_test_pred = (
+                        model_.predict(X_test, verbose=0) * self.scaling_factor
+                    )
                     mse = tf.reduce_mean(tf.square(Y_test - Y_test_pred))
                     del model_
                     print(
@@ -270,7 +268,7 @@ class NN:
         Train models
         """
         strftime = time.strftime("%Y%m%d%H%M%S")
-        mout_path = Path("%s_%s" % (mout_path_, strftime))
+        mout_path = Path(f"{mout_path_}_{strftime}")
         mout_path.mkdir()
 
         with open(f"{mout_path}/config.toml", "w") as file:
@@ -286,7 +284,7 @@ class NN:
                 nmx_samples=nmx_samples,
                 num_epochs=num_epochs,
                 batch_size=batch_size,
-                mout_path=mout_path,
+                mout_path=str(mout_path),
                 outname_suffix=strftime,
             )
         return str(mout_path)
@@ -304,7 +302,7 @@ class NN:
         avg_predictions = predictions.mean(axis=0)
         plot_exp_vs_pred(Y, avg_predictions, plotout)
 
-    def predict(self, mx: np.array) -> np.array:
+    def predict(self, mx: np.ndarray) -> np.ndarray:
         """
         Predict a single matrix using the optimized ensemble graph.
         """

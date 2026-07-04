@@ -38,12 +38,15 @@ def main():
     if args.inputmx is None or args.model is None:
         print("ERROR! Please specify input file matrix and a model directory!")
         print(
-            "\n Prediction usage: %s --inputmx [Matrices to invert] --inverseout [output ML inverted matrices] --model [path of the model]"
-            % (argv[0])
+            "\n Prediction usage:"
+            f" {argv[0]} --inputmx [Matrices to invert] --inverseout"
+            " [output ML inverted matrices] --model [path of the model]"
         )
         print(
-            "\n Prediction with target evaluation usage: %s --inputmx [Matrices to invert] --invtarget [Experimental inverted matrices] --inverseout [output ML inverted matrices] --model [path of the model]"
-            % (argv[0])
+            "\n Prediction with target evaluation usage:"
+            f" {argv[0]} --inputmx [Matrices to invert] --invtarget"
+            " [Experimental inverted matrices] --inverseout [output ML inverted"
+            " matrices] --model [path of the model]"
         )
     else:
         mxinference = MatrixInversionInference(

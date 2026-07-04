@@ -44,8 +44,9 @@ def main():
     if args.msize is None:
         print("ERROR! Please specify matrix size you want to have!")
         print(
-            "\n Usage: %s --msize [input file] --rmin [float] --rmax [float] --epochs [int] --batch_size [int] --mout [str] --n_repeats [int]"
-            % (argv[0])
+            "\n Usage:"
+            f" {argv[0]} --msize [input file] --rmin [float] --rmax [float]"
+            " --epochs [int] --batch_size [int] --mout [str] --n_repeats [int]"
         )
     else:
         nn = NN(args.msize, args.rmin, args.rmax)
