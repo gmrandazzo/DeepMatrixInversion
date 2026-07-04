@@ -31,5 +31,5 @@ def test_recursive_invalid_size():
     inference.nn.msize = 3
     
     mx = np.random.uniform(-1, 1, (5, 5)) # 5 is not a multiple of 3
-    with pytest.raises(ValueError, match="must be a multiple of the model size 3"):
+    with pytest.raises(ValueError, match="The model is not suited to predict the input matrix."):
         inference.invert([mx])

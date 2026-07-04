@@ -103,22 +103,25 @@ class NN:
 
     def get_scaling_factor(self):
         """
-        Calculate scaling factor based on the defined range.
-        If range_max/min are not set, fallback to data-driven scaling.
+        Calculate scaling factor based on available information.
+
+        If training data ``self.X`` is available, use a data-driven scaling
+        factor (ceiled max-min range of the data). Otherwise fall back to the
+        configured ``range_max - range_min``.
         """
+        if hasattr(self, "X") and self.X is not None and len(self.X) > 0:
+            global_min = global_max = self.X[0].flatten()[0]
+            for x in self.X:
+                flat_matrix = x.flatten()
+                global_min = min(global_min, np.min(flat_matrix))
+                global_max = max(global_max, np.max(flat_matrix))
+            return np.ceil(global_max - global_min)
+
         if hasattr(self, "range_max") and hasattr(self, "range_min"):
             if self.range_max is not None and self.range_min is not None:
                 return float(self.range_max - self.range_min)
 
-        if not hasattr(self, "X") or self.X is None or len(self.X) == 0:
-            return 1.0  # Default fallback
-
-        global_min = global_max = self.X[0].flatten()[0]
-        for x in self.X:
-            flat_matrix = x.flatten()
-            global_min = min(global_min, np.min(flat_matrix))
-            global_max = max(global_max, np.max(flat_matrix))
-        return np.ceil(global_max - global_min)
+        return 1.0  # Default fallback
 
     def build_model(self):
         inp = tf.keras.layers.Input(shape=[self.msize, self.msize])
@@ -131,7 +134,7 @@ class NN:
                 x = tf.keras.layers.concatenate([x, y])
             # x = tf.keras.layers.BatchNormalization()(x)
             x = tf.keras.layers.Dense(
-                128,
+                self.nunits,
                 kernel_initializer=tf.keras.initializers.Zeros(),
                 bias_initializer=tf.keras.initializers.Zeros(),
             )(x)
@@ -192,7 +195,7 @@ class NN:
         )
         logfile += outname_suffix
 
-        model_output = "%s/%d.keras" % (str(mout_path.absolute()), model_id)
+        model_output = "%s/%d.keras" % (str(Path(mout_path).absolute()), model_id)
         """
         TensorBoard(
                 log_dir=logfile,
@@ -295,12 +298,11 @@ class NN:
             nmx_sample, self.msize, self.range_min, self.range_max
         )
         models = self.load_models(mout_path)
-        predictions = [[] for _ in range(len(Y))]
-        for model in models:
-            ytp = model.predict(X) * self.scaling_factor
-            for i, yp in enumerate(ytp):
-                predictions[i].append(yp)
-        plot_exp_vs_pred(Y, np.array(predictions), plotout)
+        predictions = np.array(
+            [model.predict(X) * self.scaling_factor for model in models]
+        )
+        avg_predictions = predictions.mean(axis=0)
+        plot_exp_vs_pred(Y, avg_predictions, plotout)
 
     def predict(self, mx: np.array) -> np.array:
         """

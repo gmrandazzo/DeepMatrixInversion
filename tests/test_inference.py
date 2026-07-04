@@ -4,6 +4,7 @@ from deepmatrixinversion.inference import MatrixInversionInference
 
 def test_split_matrix():
     inference = MatrixInversionInference(models_path=None, invert_mode="numpy")
+    inference.nn.msize = 2
     mx = np.array([
         [1, 2, 3, 4],
         [5, 6, 7, 8],
@@ -20,6 +21,7 @@ def test_split_matrix():
 def test_block_matrix_inverse():
     # Use numpy for actual inversion, just testing the block formula logic
     inference = MatrixInversionInference(models_path=None, invert_mode="numpy")
+    inference.nn.msize = 2
     
     # 4x4 matrix
     mx = np.array([
@@ -42,5 +44,5 @@ def test_invert_mismatch_size():
     inference.nn.msize = 3 # Model trained for 3x3
     
     mx = np.array([[1, 2], [3, 4]]) # 2x2 matrix
-    with pytest.raises(ValueError, match="The model is not suitted to predict the input matrix."):
+    with pytest.raises(ValueError, match="The model is not suited to predict the input matrix."):
         inference.invert([mx])

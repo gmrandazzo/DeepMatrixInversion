@@ -24,7 +24,7 @@ def floss(y_true, y_pred):
     where
     A is the original not inverted matrix
     A^{-1} is the inverted matrix
-    I is the identiy matrix
+    I is the identity matrix
 
     y_true is the true inverse
     y_pred is the predicted inverse
@@ -32,7 +32,7 @@ def floss(y_true, y_pred):
     """
 
     """
-    Fast Forbenius L-2 Norm
+    Fast Frobenius L-2 Norm
     """
     shape = tf.shape(y_true)
     batch_size = shape[0]

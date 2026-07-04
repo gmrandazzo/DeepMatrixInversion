@@ -107,6 +107,8 @@ def plot_diff(inverselst_true: list, inverselst_pred: list, save_path: str = Non
     fig, axes = plt.subplots(
         1, len(inverselst_true), figsize=(5 * len(inverselst_true), 5)
     )
+    if len(inverselst_true) == 1:
+        axes = [axes]
     for i, (true, pred) in enumerate(zip(inverselst_true, inverselst_pred)):
         diff = true - pred
         im = axes[i].imshow(diff, cmap="RdYlGn")

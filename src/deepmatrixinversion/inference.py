@@ -105,7 +105,7 @@ class MatrixInversionInference:
         
         if size < self.nn.msize or size % self.nn.msize != 0:
             raise ValueError(
-                f"Matrix size {size} must be a multiple of the model size {self.nn.msize}."
+                "The model is not suited to predict the input matrix."
             )
         
         A, B, C, D = self.split_matrix(mx)

@@ -24,5 +24,5 @@ def main():
         print("WARNING: Dataset not valid!")
 
 
-if __name__ in "__main__":
+if __name__ == "__main__":
     main()
